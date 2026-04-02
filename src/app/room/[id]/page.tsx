@@ -337,14 +337,14 @@ export default function RoomPage() {
 
   if (loading || (!room && !showJoinModal)) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#0a0a0b]">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-indigo-500 border-t-transparent"></div>
+      <div className="flex min-h-screen items-center justify-center bg-[#0a0a0b]" suppressHydrationWarning>
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-indigo-500 border-t-transparent" suppressHydrationWarning></div>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col h-screen bg-[#0a0a0b] text-white overflow-hidden relative">
+    <div className="flex flex-col h-screen bg-[#0a0a0b] text-white overflow-hidden relative" suppressHydrationWarning>
       {/* Dynamic Background */}
       <div className="fixed inset-0 -z-10 bg-[radial-gradient(circle_at_50%_0%,rgba(67,56,202,0.08),transparent_50%)] pointer-events-none"></div>
       
@@ -953,16 +953,16 @@ function RetroBoard({ room, roomId, users, columns, cards, isAdmin, currentUserI
       {/* Retro Board Content */}
       <div 
         ref={boardRef}
-        className="flex-1 flex gap-8 overflow-x-auto p-4 pb-12 custom-scrollbar"
+        className="flex-1 flex gap-12 overflow-x-auto p-12 pb-24 custom-scrollbar"
       >
         {columns.map((col: RetroColumn) => (
           <div 
             key={col.id} 
-            className="flex flex-col min-w-[400px] w-[400px] shrink-0 group/col"
+            className="flex flex-col min-w-[500px] w-[500px] shrink-0 group/col"
           >
-             <div className="flex items-center justify-between mb-4 px-2">
-                <div className="flex items-center gap-2">
-                  <h4 className="font-bold text-indigo-100">{col.title}</h4>
+             <div className="flex items-center justify-between mb-6 px-4">
+                <div className="flex items-center gap-3">
+                  <h4 className="text-xl font-bold text-indigo-100">{col.title}</h4>
                   <span className="bg-white/5 text-zinc-500 text-xs px-2 py-0.5 rounded-full border border-white/5 font-mono">
                     {cards.filter((c: RetroCard) => c.columnId === col.id).length}
                   </span>
@@ -975,11 +975,11 @@ function RetroBoard({ room, roomId, users, columns, cards, isAdmin, currentUserI
                 )}
              </div>
 
-             <div className="flex flex-col gap-3">
+             <div className="flex flex-col gap-8 custom-scrollbar">
                 {cards.filter((c: RetroCard) => c.columnId === col.id).map((card: RetroCard) => (
                   <div 
-                    key={card.id}
-                    className="group relative flex flex-col gap-3 rounded-2xl bg-white/5 border border-white/5 p-4 hover:border-indigo-500/30 hover:bg-white/10 transition-all hover:scale-[1.01] hover:z-10"
+                    key={card.id} 
+                    className="group relative flex flex-col gap-4 rounded-3xl bg-white/[0.03] border border-white/5 p-6 hover:bg-white/[0.05] hover:border-indigo-500/30 transition-all hover:scale-[1.02] shadow-xl"
                   >
                     {editingCardId === card.id ? (
                       <div className="flex flex-col gap-3">
@@ -1018,20 +1018,22 @@ function RetroBoard({ room, roomId, users, columns, cards, isAdmin, currentUserI
                         )}
 
                         <div className="flex items-center justify-between mt-2 pt-2 border-t border-white/5">
-                          <div className="flex items-center gap-1">
-                            <label className="p-1.5 rounded-lg transition-colors flex items-center gap-1 text-xs font-bold uppercase tracking-widest bg-white/5 text-zinc-400 hover:text-white hover:bg-white/10 cursor-pointer">
-                              <UploadCloud className="h-3.5 w-3.5" />
-                              Change
+                          <div className="flex items-center gap-2">
+                            <label className="h-10 px-4 rounded-xl transition-all flex items-center justify-center gap-2 bg-white/5 text-zinc-500 hover:text-white hover:bg-white/10 cursor-pointer active:scale-90 border border-white/5">
+                              <UploadCloud className="h-4 w-4" />
+                              <span className="text-[11px] font-black uppercase tracking-wider">Image</span>
                               <input type="file" accept="image/*" className="hidden" onChange={(e) => handleImageUpload(e, true)} />
                             </label>
                             <button 
                               onClick={() => {
                                 setActiveGifSearch(activeGifSearch === card.id ? null : card.id);
                               }}
-                              className={cn("p-1.5 rounded-lg transition-colors flex items-center gap-1 text-xs font-bold uppercase tracking-widest", activeGifSearch === card.id ? "bg-indigo-500 text-white" : "bg-white/5 text-zinc-400 hover:text-white hover:bg-white/10")}
+                              className={cn(
+                                "h-10 px-4 rounded-xl transition-all flex items-center justify-center active:scale-90 border border-transparent",
+                                activeGifSearch === card.id ? "bg-indigo-500 text-white shadow-lg shadow-indigo-500/20" : "bg-white/5 text-zinc-500 hover:text-white hover:bg-white/10 border-white/5"
+                              )}
                             >
-                              <Search className="h-3.5 w-3.5" />
-                              GIF
+                              <span className="text-[11px] font-black uppercase tracking-wider">GIF</span>
                             </button>
                           </div>
                           <div className="flex items-center gap-2">
@@ -1107,11 +1109,12 @@ function RetroBoard({ room, roomId, users, columns, cards, isAdmin, currentUserI
                 
                 {/* Add Card Dialog */}
                 {activeColumnId === col.id ? (
-                  <div className="flex flex-col gap-2 rounded-2xl bg-indigo-500/10 border border-indigo-500/50 p-4">
+                  <div className="flex flex-col gap-4 rounded-3xl bg-white/[0.02] border border-white/10 p-6 shadow-2xl relative overflow-hidden transition-all duration-300">
+                    <div className="absolute top-0 left-0 w-1 h-full bg-indigo-500/50"></div>
                     <textarea 
                       autoFocus
                       placeholder="Type your thought..."
-                      className="w-full bg-transparent border-none text-white text-base focus:outline-none resize-none min-h-[60px] custom-scrollbar"
+                      className="w-full bg-transparent border-none text-white text-base focus:outline-none resize-none min-h-[100px] custom-scrollbar placeholder-zinc-700"
                       value={newCardText}
                       onChange={(e) => setNewCardText(e.target.value)}
                       onKeyDown={(e) => {
@@ -1152,26 +1155,30 @@ function RetroBoard({ room, roomId, users, columns, cards, isAdmin, currentUserI
                       </div>
                     )}
 
-                    <div className="flex items-center justify-between mt-1">
-                      <div className="flex items-center gap-1">
+                    <div className="flex items-center justify-between mt-4">
+                      <div className="flex items-center gap-2">
                         <label 
-                          className="p-1.5 rounded-lg transition-colors flex items-center gap-1 text-xs font-bold uppercase tracking-widest bg-white/5 text-zinc-400 hover:text-white hover:bg-white/10 cursor-pointer"
+                          title="Upload Image"
+                          className="h-10 px-4 rounded-xl transition-all flex items-center justify-center gap-2 bg-white/5 text-zinc-500 hover:text-white hover:bg-white/10 cursor-pointer active:scale-90 border border-white/5"
                         >
-                          <UploadCloud className="h-3.5 w-3.5" />
-                          Upload
+                          <UploadCloud className="h-4 w-4" />
+                          <span className="text-[11px] font-black uppercase tracking-wider">Image</span>
                           <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
                         </label>
                         <button 
+                          title="Add GIF"
                           onClick={() => {
                             setActiveGifSearch(activeGifSearch === 'new' ? null : 'new');
                           }}
-                          className={cn("p-1.5 rounded-lg transition-colors flex items-center gap-1 text-xs font-bold uppercase tracking-widest", activeGifSearch === 'new' ? "bg-indigo-500 text-white" : "bg-white/5 text-zinc-400 hover:text-white hover:bg-white/10")}
+                          className={cn(
+                            "h-10 px-4 rounded-xl transition-all flex items-center justify-center active:scale-90 border border-transparent",
+                            activeGifSearch === 'new' ? "bg-indigo-500 text-white shadow-lg shadow-indigo-500/20" : "bg-white/5 text-zinc-500 hover:text-white hover:bg-white/10 border-white/5"
+                          )}
                         >
-                          <Search className="h-3.5 w-3.5" />
-                          GIF
+                          <span className="text-[11px] font-black uppercase tracking-wider">GIF</span>
                         </button>
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-3">
                         <button 
                           onClick={() => {
                             setActiveColumnId(null);
@@ -1179,11 +1186,16 @@ function RetroBoard({ room, roomId, users, columns, cards, isAdmin, currentUserI
                             setNewCardImage("");
                             setActiveGifSearch(null);
                           }}
-                          className="px-3 py-1.5 text-sm font-bold text-zinc-400 hover:text-white transition-all"
+                          className="px-4 py-2 text-sm font-bold text-zinc-500 hover:text-white transition-all"
                         >
                           Cancel
                         </button>
-                        <button onClick={() => addCard(col.id)} className="bg-white text-black px-4 py-2 rounded-xl text-sm font-black hover:bg-indigo-100 transition-all hover:scale-105 active:scale-95 shadow-xl">Post Insight</button>
+                        <button 
+                          onClick={() => addCard(col.id)} 
+                          className="bg-indigo-600 text-white px-6 py-2.5 rounded-xl text-sm font-black hover:bg-indigo-500 transition-all hover:scale-105 active:scale-95 shadow-lg shadow-indigo-500/20"
+                        >
+                          Post Insight
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -1193,10 +1205,10 @@ function RetroBoard({ room, roomId, users, columns, cards, isAdmin, currentUserI
                       setActiveColumnId(col.id);
                       setNewCardText("");
                     }}
-                    className="flex h-12 items-center justify-center gap-2 rounded-2xl border border-dashed border-white/5 text-zinc-600 hover:border-white/20 hover:text-zinc-400 hover:bg-white/5 transition-all"
+                    className="flex h-16 items-center justify-center gap-3 rounded-2xl border-2 border-dashed border-white/10 bg-white/[0.02] text-zinc-400 hover:border-indigo-500/50 hover:bg-indigo-500/5 hover:text-indigo-400 transition-all group active:scale-95"
                   >
-                    <Plus className="h-4 w-4" />
-                    Add a card
+                    <Plus className="h-5 w-5 transition-transform group-hover:scale-125" />
+                    <span className="font-bold text-sm uppercase tracking-widest">Add a card</span>
                   </button>
                 )}
              </div>
