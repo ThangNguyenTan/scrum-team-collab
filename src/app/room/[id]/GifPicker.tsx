@@ -63,7 +63,7 @@ export default function GifPicker({ onSelect, onClose }: GifPickerProps) {
   return (
     <div className="flex flex-col gap-4 bg-[#161618] border border-white/10 rounded-2xl p-4 shadow-2xl w-full max-sm:fixed max-sm:inset-x-0 max-sm:bottom-0 max-sm:z-[100] max-sm:rounded-t-[2.5rem] animate-in slide-in-from-bottom-5 duration-300">
       <div className="flex items-center justify-between mb-2">
-        <h3 className="text-sm font-bold text-white flex items-center gap-2 uppercase tracking-widest">
+        <h3 className="text-base font-bold text-white flex items-center gap-2 uppercase tracking-widest">
           <span className="text-indigo-400">Giphy</span> Search
         </h3>
         <button onClick={onClose} className="p-1 hover:bg-white/5 rounded-full text-zinc-500 hover:text-white transition-colors">
@@ -85,7 +85,7 @@ export default function GifPicker({ onSelect, onClose }: GifPickerProps) {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search for a GIF..."
-          className="block w-full pl-10 pr-3 py-2.5 bg-black/40 border border-white/5 rounded-xl text-sm text-white placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all font-medium"
+          className="block w-full pl-10 pr-3 py-2.5 bg-black/40 border border-white/5 rounded-xl text-base text-white placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all font-medium"
         />
       </div>
 
@@ -103,26 +103,26 @@ export default function GifPicker({ onSelect, onClose }: GifPickerProps) {
               loading="lazy"
             />
             <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-               <div className="text-[10px] font-bold text-white bg-indigo-500 px-2 py-1 rounded shadow-lg uppercase tracking-tighter">Select</div>
+               <div className="text-xs font-bold text-white bg-indigo-500 px-2 py-1 rounded shadow-lg uppercase tracking-tighter">Select</div>
             </div>
           </button>
         ))}
 
         {gifs.length === 0 && !loading && !error && (
           <div className="col-span-full py-10 text-center">
-            <p className="text-zinc-500 text-xs font-medium">No GIFs found for "{query}"</p>
+            <p className="text-zinc-500 text-sm font-medium">No GIFs found for "{query}"</p>
           </div>
         )}
 
         {error && (
           <div className="col-span-full py-8 text-center px-4">
-            <p className="text-rose-400 text-[10px] font-bold uppercase tracking-wider mb-2">{error}</p>
-            <p className="text-zinc-500 text-[10px]">Add a valid API key to .env.local: NEXT_PUBLIC_GIPHY_API_KEY</p>
+            <p className="text-rose-400 text-xs font-bold uppercase tracking-wider mb-2">{error}</p>
+            <p className="text-zinc-500 text-xs">Add a valid API key to .env.local: NEXT_PUBLIC_GIPHY_API_KEY</p>
           </div>
         )}
       </div>
 
-      <div className="text-[9px] text-zinc-600 font-bold uppercase tracking-[0.2em] flex items-center justify-center gap-2 mt-1">
+      <div className="text-[11px] text-zinc-600 font-bold uppercase tracking-[0.2em] flex items-center justify-center gap-2 mt-1">
         <span>Powered by</span>
         <img 
             src="https://upload.wikimedia.org/wikipedia/commons/8/82/Giphy-logo.svg" 

@@ -100,6 +100,7 @@ export default function RoomPage() {
   const [displayName, setDisplayName] = useState<string>("");
   const [showJoinModal, setShowJoinModal] = useState(false);
   
+  const [activeTab, setActiveTab] = useState<"planning" | "retro">("planning");
   const [room, setRoom] = useState<RoomData | null>(null);
   const [users, setUsers] = useState<RoomUser[]>([]);
   const [columns, setColumns] = useState<RetroColumn[]>([]);
@@ -118,23 +119,32 @@ export default function RoomPage() {
       
       // Check local storage for preference
       const savedName = localStorage.getItem(`scrum_name_${roomId}`);
-      if (savedName) setDisplayName(savedName);
+      if (savedName && !displayName) setDisplayName(savedName);
 
-      if (!u && !savedName) {
-        setShowJoinModal(true);
-      } else if (u) {
-        // We have a real Firebase user (Google or Anonymous)
-        const finalName = u.displayName || savedName || "";
-        if (finalName && !displayName) setDisplayName(finalName);
+      if (!u) {
+        if (savedName) {
+          // If returning guest, log in silently and skip modal
+          await signInAnonymously(auth);
+        } else {
+          setShowJoinModal(true);
+        }
+      } else {
+        // User exists (Google or Anon)
+        if (u.isAnonymous && !savedName) {
+          setShowJoinModal(true);
+        } else {
+          // Returning guest or Google user
+          const finalName = u.displayName || savedName || "Guest";
+          if (finalName && !displayName) setDisplayName(finalName);
 
-        await setDoc(doc(db, "rooms", roomId, "users", u.uid), {
-          name: finalName || "Guest",
-          lastSeen: serverTimestamp(),
-          joinedAt: serverTimestamp(),
-        }, { merge: true });
-      } else if (savedName) {
-          // We have a name but no user yet? Let's trigger anon login
-          const anon = await signInAnonymously(auth);
+          await setDoc(doc(db, "rooms", roomId, "users", u.uid), {
+            name: finalName,
+            lastSeen: serverTimestamp(),
+            joinedAt: serverTimestamp(),
+          }, { merge: true });
+          
+          setShowJoinModal(false);
+        }
       }
       setLoading(false);
     });
@@ -146,6 +156,9 @@ export default function RoomPage() {
     if (roomId) {
       localStorage.setItem("scrum_last_room", roomId);
     }
+
+    const lastTab = localStorage.getItem(`scrum_tab_${roomId}`) as "planning" | "retro";
+    if (lastTab) setActiveTab(lastTab);
   }, [roomId]);
 
   // --- Heartbeat & Cleanup ---
@@ -272,15 +285,12 @@ export default function RoomPage() {
     // Or normally room creator does it.
   };
 
-  const handleModeSwitch = async (status: "planning" | "retro") => {
-    if (!isAdmin) return;
-    await updateDoc(doc(db, "rooms", roomId), { 
-      status, 
-      revealed: false 
-    });
+  const handleTabSwitch = async (tab: "planning" | "retro") => {
+    setActiveTab(tab);
+    localStorage.setItem(`scrum_tab_${roomId}`, tab);
     
-    // Auto-create default columns if retro and none exist
-    if (status === "retro") {
+    // Auto-create default columns if switching to retro and none exist (Idempotent)
+    if (tab === "retro" && roomId) {
       const colSnap = await getDocs(collection(db, "rooms", roomId, "columns"));
       if (colSnap.empty) {
         const defaults = ["What went well", "What could be improved", "Action Items"];
@@ -347,7 +357,7 @@ export default function RoomPage() {
           </div>
           <div className="h-4 w-[1px] bg-white/10 hidden sm:block"></div>
           <div className="hidden sm:flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 group">
-            <span className="text-sm font-medium text-zinc-400 group-hover:text-white transition-colors">{roomId}</span>
+            <span className="text-base font-medium text-zinc-400 group-hover:text-white transition-colors">{roomId}</span>
             <button onClick={() => copyToClipboard(roomId, setIdCopyFeedback)} className="text-zinc-500 hover:text-indigo-400 transition-colors">
               {idCopyFeedback ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
             </button>
@@ -355,7 +365,7 @@ export default function RoomPage() {
           {user && !user.isAnonymous && (
             <button 
               onClick={createNewRoom}
-              className="hidden lg:flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-indigo-400 hover:text-indigo-300 transition-colors bg-indigo-500/10 px-3 py-1.5 rounded-lg border border-indigo-500/20"
+              className="hidden lg:flex items-center gap-2 text-xs font-black uppercase tracking-widest text-indigo-400 hover:text-indigo-300 transition-colors bg-indigo-500/10 px-3 py-1.5 rounded-lg border border-indigo-500/20"
             >
               <Plus className="h-3 w-3" />
               New Room
@@ -364,30 +374,28 @@ export default function RoomPage() {
         </div>
 
         <div className="flex items-center gap-3">
-          {isAdmin && (
-            <div className="flex p-1 rounded-xl bg-white/5 border border-white/10 mr-4">
-              <button 
-                onClick={() => handleModeSwitch("planning")}
-                className={cn(
-                  "px-4 py-1.5 rounded-lg text-xs font-bold transition-all",
-                  room?.status === "planning" ? "bg-indigo-500 text-white shadow-lg shadow-indigo-500/20" : "text-zinc-500 hover:text-zinc-300"
-                )}
-              >
-                Planning
-              </button>
-              <button 
-                onClick={() => handleModeSwitch("retro")}
-                className={cn(
-                  "px-4 py-1.5 rounded-lg text-xs font-bold transition-all",
-                  room?.status === "retro" ? "bg-indigo-500 text-white shadow-lg shadow-indigo-500/20" : "text-zinc-500 hover:text-zinc-300"
-                )}
-              >
-                Retro
-              </button>
-            </div>
-          )}
+          <div className="flex p-1 rounded-xl bg-white/5 border border-white/10 mr-4">
+            <button 
+              onClick={() => handleTabSwitch("planning")}
+              className={cn(
+                "px-4 py-1.5 rounded-lg text-sm font-bold transition-all",
+                activeTab === "planning" ? "bg-indigo-500 text-white shadow-lg shadow-indigo-500/20" : "text-zinc-500 hover:text-zinc-300"
+              )}
+            >
+              Planning
+            </button>
+            <button 
+              onClick={() => handleTabSwitch("retro")}
+              className={cn(
+                "px-4 py-1.5 rounded-lg text-sm font-bold transition-all",
+                activeTab === "retro" ? "bg-indigo-500 text-white shadow-lg shadow-indigo-500/20" : "text-zinc-500 hover:text-zinc-300"
+              )}
+            >
+              Retro
+            </button>
+          </div>
           
-          <div className="flex items-center gap-2 text-sm text-zinc-400 bg-white/5 px-3 py-1.5 rounded-lg border border-white/5">
+          <div className="flex items-center gap-2 text-base text-zinc-400 bg-white/5 px-3 py-1.5 rounded-lg border border-white/5">
              <div className="h-2 w-2 rounded-full bg-emerald-500"></div>
              {users.length} Team Members
           </div>
@@ -395,7 +403,7 @@ export default function RoomPage() {
           <button 
             onClick={() => copyToClipboard(window.location.href, setInviteFeedback)}
             className={cn(
-              "flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold transition-all active:scale-95",
+              "flex items-center gap-2 rounded-xl border px-4 py-2 text-base font-semibold transition-all active:scale-95",
               inviteFeedback 
                 ? "bg-emerald-500/10 border-emerald-500/50 text-emerald-400" 
                 : "bg-white/5 border-white/10 hover:bg-white/10 text-white"
@@ -422,14 +430,14 @@ export default function RoomPage() {
         <aside className="w-80 border-r border-white/5 bg-black/40 flex flex-col hidden lg:flex shrink-0">
           <div className="p-4 border-b border-white/5 flex items-center gap-2 text-zinc-400 shrink-0">
             <Users className="h-4 w-4" />
-            <span className="text-[10px] font-bold uppercase tracking-widest">Connected Team</span>
+            <span className="text-xs font-bold uppercase tracking-widest">Connected Team</span>
           </div>
           <div className="flex-1 overflow-y-auto p-4 space-y-2 custom-scrollbar">
             {sortedUsers.map(u => (
               <div key={u.id} className="flex items-center justify-between group/u p-2 rounded-xl hover:bg-white/[0.02] border border-transparent hover:border-white/5 transition-all">
                 <div className="flex items-center gap-2">
                   <div className={cn(
-                    "h-7 w-7 rounded-full border flex items-center justify-center font-bold text-[10px]",
+                    "h-7 w-7 rounded-full border flex items-center justify-center font-bold text-xs",
                     u.id === room?.creatorId 
                       ? "bg-amber-500/10 border-amber-500/30 text-amber-500" 
                       : "bg-indigo-500/10 border-indigo-500/20 text-indigo-400"
@@ -437,7 +445,7 @@ export default function RoomPage() {
                     {u.id === room?.creatorId ? <Crown className="h-3 w-3" /> : u.name.charAt(0)}
                   </div>
                   <div className="flex flex-col min-w-0">
-                    <span className={cn("text-xs font-medium truncate", u.id === user?.uid ? "text-white" : "text-zinc-500")}>
+                    <span className={cn("text-sm font-medium truncate", u.id === user?.uid ? "text-white" : "text-zinc-500")}>
                       {u.name} {u.id === user?.uid && "(You)"}
                     </span>
                     {u.id === room?.creatorId && (
@@ -455,9 +463,9 @@ export default function RoomPage() {
 
         {/* Main Board */}
         <main className="flex-1 bg-black/40 overflow-hidden relative">
-          {room?.status === "planning" ? (
+          {activeTab === "planning" ? (
              <PlanningBoard 
-               room={room} 
+               room={room as RoomData} 
                roomId={roomId} 
                users={users} 
                isAdmin={isAdmin} 
@@ -482,8 +490,8 @@ export default function RoomPage() {
       {showJoinModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-6">
           <div className="w-full max-w-sm rounded-[2rem] border border-white/10 bg-[#161618] p-8 shadow-2xl">
-            <h2 className="text-2xl font-bold text-white mb-2">Joining Scrum Room</h2>
-            <p className="text-zinc-400 text-sm mb-6">Enter a display name to get started. No account needed.</p>
+            <h2 className="text-3xl font-bold text-white mb-2">Joining Scrum Room</h2>
+            <p className="text-zinc-400 text-base mb-6">Enter a display name to get started. No account needed.</p>
             <form onSubmit={(e) => {
               e.preventDefault();
               const name = (e.currentTarget.elements.namedItem("name") as HTMLInputElement).value;
@@ -499,7 +507,7 @@ export default function RoomPage() {
               />
               <button 
                 type="submit" 
-                className="w-full h-12 rounded-xl bg-white text-black font-bold text-lg hover:bg-zinc-200 transition-all active:scale-[0.98]"
+                className="w-full h-12 rounded-xl bg-white text-black font-bold text-xl hover:bg-zinc-200 transition-all active:scale-[0.98]"
               >
                 Join Now
               </button>
@@ -580,14 +588,14 @@ function PlanningBoard({ room, roomId, users, isAdmin, currentUserId }: any) {
         </div>
       )}
       <span className={cn(
-        "text-4xl font-black transition-transform group-hover:scale-125 duration-500",
-        card === "☕" ? "text-3xl" : "",
+        "text-5xl font-black transition-transform group-hover:scale-125 duration-500",
+        card === "☕" ? "text-4xl" : "",
         "text-white"
       )}>
         {card}
       </span>
       <span className={cn(
-        "text-[10px] uppercase font-black tracking-widest opacity-30 mt-3",
+        "text-xs uppercase font-black tracking-widest opacity-30 mt-3",
         myVote === card ? "text-white opacity-80" : "text-white/40"
       )}>
         Points
@@ -600,38 +608,38 @@ function PlanningBoard({ room, roomId, users, isAdmin, currentUserId }: any) {
       {/* 1. Header Controls for Planning */}
       <div className="shrink-0 flex items-center justify-between bg-white/[0.03] border border-white/5 p-6 rounded-[2rem] shadow-xl">
         <div className="flex flex-col gap-1">
-          <h2 className="text-3xl font-black flex items-center gap-4 text-white tracking-tight">
+          <h2 className="text-4xl font-black flex items-center gap-4 text-white tracking-tight">
             Sprint Planning
             {stats !== null && (
               <div className="flex gap-3 items-center ml-2">
-                <span className="flex items-center gap-2 text-indigo-400 bg-indigo-500/10 px-4 py-1.5 rounded-xl text-lg border border-indigo-500/20 shadow-lg shadow-indigo-500/10">
+                <span className="flex items-center gap-2 text-indigo-400 bg-indigo-500/10 px-4 py-1.5 rounded-xl text-xl border border-indigo-500/20 shadow-lg shadow-indigo-500/10">
                   Avg: <span className="font-bold text-white">{stats.avg}</span>
                 </span>
-                <span className="flex items-center gap-2 text-sky-400 bg-sky-500/10 px-4 py-1.5 rounded-xl text-lg border border-sky-500/20 shadow-lg shadow-sky-500/10">
+                <span className="flex items-center gap-2 text-sky-400 bg-sky-500/10 px-4 py-1.5 rounded-xl text-xl border border-sky-500/20 shadow-lg shadow-sky-500/10">
                   Min: <span className="font-bold text-white">{stats.min}</span>
                 </span>
-                <span className="flex items-center gap-2 text-rose-400 bg-rose-500/10 px-4 py-1.5 rounded-xl text-lg border border-rose-500/20 shadow-lg shadow-rose-500/10">
+                <span className="flex items-center gap-2 text-rose-400 bg-rose-500/10 px-4 py-1.5 rounded-xl text-xl border border-rose-500/20 shadow-lg shadow-rose-500/10">
                   Max: <span className="font-bold text-white">{stats.max}</span>
                 </span>
                 
                 <div className="h-6 w-px bg-white/10 mx-1"></div>
                 
                 {/* Proposed Final Estimate */}
-                <span className="flex items-center gap-2 text-emerald-400 bg-emerald-500/10 px-5 py-1.5 rounded-xl text-lg border border-emerald-500/30 shadow-[0_0_30px_rgba(52,211,153,0.15)] relative overflow-hidden group">
+                <span className="flex items-center gap-2 text-emerald-400 bg-emerald-500/10 px-5 py-1.5 rounded-xl text-xl border border-emerald-500/30 shadow-[0_0_30px_rgba(52,211,153,0.15)] relative overflow-hidden group">
                   <div className="absolute inset-0 bg-emerald-400/10 blur-xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
                   <Sparkles className="h-4 w-4 relative z-10 animate-pulse" />
-                  <span className="relative z-10 tracking-widest uppercase text-xs font-black pt-1">Proposed: </span>
-                  <span className="relative z-10 font-black text-white text-xl">{stats.proposal}</span>
+                  <span className="relative z-10 tracking-widest uppercase text-sm font-black pt-1">Proposed: </span>
+                  <span className="relative z-10 font-black text-white text-2xl">{stats.proposal}</span>
                 </span>
               </div>
             )}
           </h2>
           <div className="flex items-center gap-4">
-            <p className="text-zinc-500 text-[10px] uppercase tracking-[0.3em] font-black font-mono">
+            <p className="text-zinc-500 text-xs uppercase tracking-[0.3em] font-black font-mono">
               {users.filter((u: any) => u.vote).length} / {users.length} Team Members Voted
             </p>
             {allVoted && !room.revealed && (
-              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-400 bg-emerald-500/10 px-3 py-1.5 rounded-full border border-emerald-500/20 animate-pulse">
+              <span className="text-xs font-black uppercase tracking-[0.2em] text-emerald-400 bg-emerald-500/10 px-3 py-1.5 rounded-full border border-emerald-500/20 animate-pulse">
                 Ready!
               </span>
             )}
@@ -642,7 +650,7 @@ function PlanningBoard({ room, roomId, users, isAdmin, currentUserId }: any) {
           <div className="flex items-center gap-3">
             <button 
               onClick={handleClear}
-              className="px-6 py-3 rounded-xl border border-white/10 bg-white/5 text-xs font-black text-zinc-400 hover:bg-white/10 hover:text-white transition-all active:scale-95 flex items-center gap-2"
+              className="px-6 py-3 rounded-xl border border-white/10 bg-white/5 text-sm font-black text-zinc-400 hover:bg-white/10 hover:text-white transition-all active:scale-95 flex items-center gap-2"
             >
               <RefreshCw className="h-4 w-4" />
               Reset Board
@@ -650,7 +658,7 @@ function PlanningBoard({ room, roomId, users, isAdmin, currentUserId }: any) {
             <button 
               onClick={handleReveal}
               className={cn(
-                "px-8 py-3 rounded-xl text-xs font-black transition-all active:scale-95 flex items-center gap-2",
+                "px-8 py-3 rounded-xl text-sm font-black transition-all active:scale-95 flex items-center gap-2",
                 room.revealed 
                   ? "bg-white text-black shadow-[0_15px_40px_rgba(255,255,255,0.2)]" 
                   : allVoted 
@@ -679,17 +687,17 @@ function PlanningBoard({ room, roomId, users, isAdmin, currentUserId }: any) {
                       : "bg-white/[0.02] border-white/5"
                   )}
                 >
-                  <div className="mb-4 h-12 w-12 rounded-full bg-zinc-800 flex items-center justify-center text-lg font-black text-zinc-400 border border-white/5 shadow-inner">
+                  <div className="mb-4 h-12 w-12 rounded-full bg-zinc-800 flex items-center justify-center text-xl font-black text-zinc-400 border border-white/5 shadow-inner">
                     {u.name.charAt(0)}
                   </div>
-                  <span className="text-[10px] font-black text-zinc-500 mb-6 truncate w-full text-center uppercase tracking-widest">{u.name}</span>
+                  <span className="text-xs font-black text-zinc-500 mb-6 truncate w-full text-center uppercase tracking-widest">{u.name}</span>
                   
                   <div className={cn(
                     "h-32 w-24 rounded-2xl flex items-center justify-center transition-all duration-700 perspective-1000",
                     room.revealed ? "rotate-0" : u.vote ? "rotate-y-180" : "opacity-10 scale-90"
                   )}>
                       {room.revealed ? (
-                        <div className="h-full w-full rounded-2xl bg-white text-black flex items-center justify-center text-4xl font-black shadow-2xl relative">
+                        <div className="h-full w-full rounded-2xl bg-white text-black flex items-center justify-center text-5xl font-black shadow-2xl relative">
                           <div className="absolute top-2 left-2 text-[8px] opacity-20 font-black">SCRUM</div>
                           <div className="absolute bottom-2 right-2 text-[8px] opacity-20 font-black rotate-180">SCRUM</div>
                           {u.vote === "☕" ? <Coffee className="h-10 w-10" /> : u.vote || "-"}
@@ -728,7 +736,7 @@ function PlanningBoard({ room, roomId, users, isAdmin, currentUserId }: any) {
               {cards.slice(7).map(renderCard)}
             </div>
          </div>
-         <p className="mt-5 text-[10px] font-black text-zinc-600 uppercase tracking-[0.4em] animate-pulse">Select your estimation card</p>
+         <p className="mt-5 text-xs font-black text-zinc-600 uppercase tracking-[0.4em] animate-pulse">Select your estimation card</p>
       </div>
     </div>
   );
@@ -910,20 +918,20 @@ function RetroBoard({ room, roomId, users, columns, cards, isAdmin, currentUserI
       {/* Retro Header */}
       <div className="shrink-0 flex items-center justify-between">
         <div className="flex flex-col gap-1">
-          <h2 className="text-3xl font-bold flex items-center gap-3">
+          <h2 className="text-4xl font-bold flex items-center gap-3">
             Sprint Retrospective
-            <span className="text-purple-400 bg-purple-500/10 px-3 py-1 rounded-lg text-sm border border-purple-500/20">
+            <span className="text-purple-400 bg-purple-500/10 px-3 py-1 rounded-lg text-base border border-purple-500/20">
               {cards.length} Insights
             </span>
           </h2>
-          <p className="text-zinc-500 text-sm">Reflect, prioritize, and improve together as a team.</p>
+          <p className="text-zinc-500 text-base">Reflect, prioritize, and improve together as a team.</p>
         </div>
         
         <div className="flex items-center gap-3">
           {isAdmin && (
              <button 
               onClick={addColumn}
-              className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 py-2.5 px-5 text-sm font-bold text-zinc-400 hover:bg-white/10 hover:text-white transition-all"
+              className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 py-2.5 px-5 text-base font-bold text-zinc-400 hover:bg-white/10 hover:text-white transition-all"
              >
                <Plus className="h-4 w-4" />
                Add Column
@@ -955,7 +963,7 @@ function RetroBoard({ room, roomId, users, columns, cards, isAdmin, currentUserI
              <div className="flex items-center justify-between mb-4 px-2">
                 <div className="flex items-center gap-2">
                   <h4 className="font-bold text-indigo-100">{col.title}</h4>
-                  <span className="bg-white/5 text-zinc-500 text-[10px] px-2 py-0.5 rounded-full border border-white/5 font-mono">
+                  <span className="bg-white/5 text-zinc-500 text-xs px-2 py-0.5 rounded-full border border-white/5 font-mono">
                     {cards.filter((c: RetroCard) => c.columnId === col.id).length}
                   </span>
                 </div>
@@ -977,7 +985,7 @@ function RetroBoard({ room, roomId, users, columns, cards, isAdmin, currentUserI
                       <div className="flex flex-col gap-3">
                         <textarea 
                           autoFocus
-                          className="w-full bg-transparent border-none text-white text-sm focus:outline-none resize-none min-h-[80px] custom-scrollbar"
+                          className="w-full bg-transparent border-none text-white text-base focus:outline-none resize-none min-h-[80px] custom-scrollbar"
                           value={editingText}
                           onChange={(e) => setEditingText(e.target.value)}
                         />
@@ -1011,7 +1019,7 @@ function RetroBoard({ room, roomId, users, columns, cards, isAdmin, currentUserI
 
                         <div className="flex items-center justify-between mt-2 pt-2 border-t border-white/5">
                           <div className="flex items-center gap-1">
-                            <label className="p-1.5 rounded-lg transition-colors flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest bg-white/5 text-zinc-400 hover:text-white hover:bg-white/10 cursor-pointer">
+                            <label className="p-1.5 rounded-lg transition-colors flex items-center gap-1 text-xs font-bold uppercase tracking-widest bg-white/5 text-zinc-400 hover:text-white hover:bg-white/10 cursor-pointer">
                               <UploadCloud className="h-3.5 w-3.5" />
                               Change
                               <input type="file" accept="image/*" className="hidden" onChange={(e) => handleImageUpload(e, true)} />
@@ -1020,17 +1028,17 @@ function RetroBoard({ room, roomId, users, columns, cards, isAdmin, currentUserI
                               onClick={() => {
                                 setActiveGifSearch(activeGifSearch === card.id ? null : card.id);
                               }}
-                              className={cn("p-1.5 rounded-lg transition-colors flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest", activeGifSearch === card.id ? "bg-indigo-500 text-white" : "bg-white/5 text-zinc-400 hover:text-white hover:bg-white/10")}
+                              className={cn("p-1.5 rounded-lg transition-colors flex items-center gap-1 text-xs font-bold uppercase tracking-widest", activeGifSearch === card.id ? "bg-indigo-500 text-white" : "bg-white/5 text-zinc-400 hover:text-white hover:bg-white/10")}
                             >
                               <Search className="h-3.5 w-3.5" />
                               GIF
                             </button>
                           </div>
                           <div className="flex items-center gap-2">
-                            <button onClick={() => setEditingCardId(null)} className="text-xs font-bold text-zinc-500 hover:text-white px-2">Cancel</button>
+                            <button onClick={() => setEditingCardId(null)} className="text-sm font-bold text-zinc-500 hover:text-white px-2">Cancel</button>
                             <button 
                               onClick={() => updateCard(card.id)}
-                              className="flex items-center gap-1.5 bg-indigo-500 text-white px-3 py-1.5 rounded-lg text-xs font-black hover:bg-indigo-600 transition-all active:scale-95"
+                              className="flex items-center gap-1.5 bg-indigo-500 text-white px-3 py-1.5 rounded-lg text-sm font-black hover:bg-indigo-600 transition-all active:scale-95"
                             >
                               <Save className="h-3.5 w-3.5" />
                               Save
@@ -1051,11 +1059,11 @@ function RetroBoard({ room, roomId, users, columns, cards, isAdmin, currentUserI
                             />
                           </div>
                         )}
-                        {card.text && <p className="text-sm text-zinc-200 leading-relaxed break-words">{card.text}</p>}
+                        {card.text && <p className="text-base text-zinc-200 leading-relaxed break-words">{card.text}</p>}
                         
                         <div className="flex items-center justify-between mt-2 pt-2 border-t border-white/5">
                           <div className="flex items-center gap-2.5">
-                            <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-indigo-500/20 text-[10px] font-black text-indigo-300 border border-indigo-500/30">
+                            <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-indigo-500/20 text-xs font-black text-indigo-300 border border-indigo-500/30">
                               {(card.authorName || "M").charAt(0).toUpperCase()}
                             </div>
                             <span className="text-[11px] font-black text-zinc-300 uppercase tracking-wider truncate max-w-[120px]">
@@ -1078,7 +1086,7 @@ function RetroBoard({ room, roomId, users, columns, cards, isAdmin, currentUserI
                               onClick={() => toggleUpvote(card)}
                               title={ (card.authorId === currentUserId || (card.authorName === displayName && displayName !== "")) ? "You cannot upvote your own insight" : "" }
                               className={cn(
-                                "flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-bold transition-all",
+                                "flex items-center gap-1.5 px-2 py-1 rounded-full text-sm font-bold transition-all",
                                 (card.authorId === currentUserId || (card.authorName === displayName && displayName !== "")) 
                                   ? "opacity-50 grayscale cursor-not-allowed" 
                                   : "cursor-pointer",
@@ -1103,7 +1111,7 @@ function RetroBoard({ room, roomId, users, columns, cards, isAdmin, currentUserI
                     <textarea 
                       autoFocus
                       placeholder="Type your thought..."
-                      className="w-full bg-transparent border-none text-white text-sm focus:outline-none resize-none min-h-[60px] custom-scrollbar"
+                      className="w-full bg-transparent border-none text-white text-base focus:outline-none resize-none min-h-[60px] custom-scrollbar"
                       value={newCardText}
                       onChange={(e) => setNewCardText(e.target.value)}
                       onKeyDown={(e) => {
@@ -1147,7 +1155,7 @@ function RetroBoard({ room, roomId, users, columns, cards, isAdmin, currentUserI
                     <div className="flex items-center justify-between mt-1">
                       <div className="flex items-center gap-1">
                         <label 
-                          className="p-1.5 rounded-lg transition-colors flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest bg-white/5 text-zinc-400 hover:text-white hover:bg-white/10 cursor-pointer"
+                          className="p-1.5 rounded-lg transition-colors flex items-center gap-1 text-xs font-bold uppercase tracking-widest bg-white/5 text-zinc-400 hover:text-white hover:bg-white/10 cursor-pointer"
                         >
                           <UploadCloud className="h-3.5 w-3.5" />
                           Upload
@@ -1157,7 +1165,7 @@ function RetroBoard({ room, roomId, users, columns, cards, isAdmin, currentUserI
                           onClick={() => {
                             setActiveGifSearch(activeGifSearch === 'new' ? null : 'new');
                           }}
-                          className={cn("p-1.5 rounded-lg transition-colors flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest", activeGifSearch === 'new' ? "bg-indigo-500 text-white" : "bg-white/5 text-zinc-400 hover:text-white hover:bg-white/10")}
+                          className={cn("p-1.5 rounded-lg transition-colors flex items-center gap-1 text-xs font-bold uppercase tracking-widest", activeGifSearch === 'new' ? "bg-indigo-500 text-white" : "bg-white/5 text-zinc-400 hover:text-white hover:bg-white/10")}
                         >
                           <Search className="h-3.5 w-3.5" />
                           GIF
@@ -1171,11 +1179,11 @@ function RetroBoard({ room, roomId, users, columns, cards, isAdmin, currentUserI
                             setNewCardImage("");
                             setActiveGifSearch(null);
                           }}
-                          className="px-3 py-1.5 text-xs font-bold text-zinc-400 hover:text-white transition-all"
+                          className="px-3 py-1.5 text-sm font-bold text-zinc-400 hover:text-white transition-all"
                         >
                           Cancel
                         </button>
-                        <button onClick={() => addCard(col.id)} className="bg-white text-black px-4 py-2 rounded-xl text-xs font-black hover:bg-indigo-100 transition-all hover:scale-105 active:scale-95 shadow-xl">Post Insight</button>
+                        <button onClick={() => addCard(col.id)} className="bg-white text-black px-4 py-2 rounded-xl text-sm font-black hover:bg-indigo-100 transition-all hover:scale-105 active:scale-95 shadow-xl">Post Insight</button>
                       </div>
                     </div>
                   </div>
