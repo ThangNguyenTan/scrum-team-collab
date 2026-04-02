@@ -1,0 +1,135 @@
+"use client";
+
+import { useState, useEffect, useCallback } from "react";
+import { Search, Loader2, X } from "lucide-react";
+import { cn } from "@/lib/utils";
+
+interface GifPickerProps {
+  onSelect: (url: string) => void;
+  onClose: () => void;
+}
+
+export default function GifPicker({ onSelect, onClose }: GifPickerProps) {
+  const [query, setQuery] = useState("");
+  const [gifs, setGifs] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const apiKey = process.env.NEXT_PUBLIC_GIPHY_API_KEY || "dc6zaTOxFJmzC"; // dc6zaTOxFJmzC is a public beta key (deprecated but sometimes works)
+
+  const searchGifs = useCallback(async (searchQuery: string) => {
+    if (!searchQuery.trim()) {
+      // Load trending if empty?
+      setLoading(true);
+      try {
+        const res = await fetch(`https://api.giphy.com/v1/gifs/trending?api_key=${apiKey}&limit=20&rating=g`);
+        const data = await res.json();
+        setGifs(data.data || []);
+      } catch (err) {
+        console.error("Failed to fetch trending GIFs", err);
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch(
+        `https://api.giphy.com/v1/gifs/search?api_key=${apiKey}&q=${encodeURIComponent(searchQuery)}&limit=20&offset=0&rating=g&lang=en`
+      );
+      const data = await res.json();
+      if (data.meta?.status !== 200) {
+        setError("API Key might be invalid or rate limited. Please check NEXT_PUBLIC_GIPHY_API_KEY.");
+      }
+      setGifs(data.data || []);
+    } catch (err) {
+      setError("Failed to search GIFs. Please try again.");
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  }, [apiKey]);
+
+  useEffect(() => {
+    const delayDebounceFn = setTimeout(() => {
+      searchGifs(query);
+    }, 500);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [query, searchGifs]);
+
+  return (
+    <div className="flex flex-col gap-4 bg-[#161618] border border-white/10 rounded-2xl p-4 shadow-2xl w-full max-sm:fixed max-sm:inset-x-0 max-sm:bottom-0 max-sm:z-[100] max-sm:rounded-t-[2.5rem] animate-in slide-in-from-bottom-5 duration-300">
+      <div className="flex items-center justify-between mb-2">
+        <h3 className="text-sm font-bold text-white flex items-center gap-2 uppercase tracking-widest">
+          <span className="text-indigo-400">Giphy</span> Search
+        </h3>
+        <button onClick={onClose} className="p-1 hover:bg-white/5 rounded-full text-zinc-500 hover:text-white transition-colors">
+          <X className="h-4 w-4" />
+        </button>
+      </div>
+
+      <div className="relative group">
+        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+          {loading ? (
+            <Loader2 className="h-4 w-4 text-indigo-500 animate-spin" />
+          ) : (
+            <Search className="h-4 w-4 text-zinc-500 group-focus-within:text-indigo-400 transition-colors" />
+          )}
+        </div>
+        <input
+          autoFocus
+          type="text"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search for a GIF..."
+          className="block w-full pl-10 pr-3 py-2.5 bg-black/40 border border-white/5 rounded-xl text-sm text-white placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all font-medium"
+        />
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 max-h-[400px] overflow-y-auto custom-scrollbar p-1">
+        {gifs.map((gif) => (
+          <button
+            key={gif.id}
+            onClick={() => onSelect(gif.images.fixed_height.url)}
+            className="relative min-h-[180px] rounded-xl overflow-hidden bg-white/5 border-2 border-transparent hover:border-indigo-500 transition-all hover:scale-[1.01] active:scale-[0.98] group shadow-xl z-0 hover:z-10"
+          >
+            <img
+              src={gif.images.fixed_height.url}
+              alt={gif.title}
+              className="w-full h-full object-cover transition-opacity group-hover:opacity-90"
+              loading="lazy"
+            />
+            <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+               <div className="text-[10px] font-bold text-white bg-indigo-500 px-2 py-1 rounded shadow-lg uppercase tracking-tighter">Select</div>
+            </div>
+          </button>
+        ))}
+
+        {gifs.length === 0 && !loading && !error && (
+          <div className="col-span-full py-10 text-center">
+            <p className="text-zinc-500 text-xs font-medium">No GIFs found for "{query}"</p>
+          </div>
+        )}
+
+        {error && (
+          <div className="col-span-full py-8 text-center px-4">
+            <p className="text-rose-400 text-[10px] font-bold uppercase tracking-wider mb-2">{error}</p>
+            <p className="text-zinc-500 text-[10px]">Add a valid API key to .env.local: NEXT_PUBLIC_GIPHY_API_KEY</p>
+          </div>
+        )}
+      </div>
+
+      <div className="text-[9px] text-zinc-600 font-bold uppercase tracking-[0.2em] flex items-center justify-center gap-2 mt-1">
+        <span>Powered by</span>
+        <img 
+            src="https://upload.wikimedia.org/wikipedia/commons/8/82/Giphy-logo.svg" 
+            alt="GIPHY" 
+            className="h-3 opacity-30 invert"
+        />
+      </div>
+    </div>
+  );
+}
