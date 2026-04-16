@@ -341,7 +341,7 @@ export function PlanningBoard({ room, roomId, users, isAdmin, currentUserId }: P
               scrollRef.current.scrollLeft = scrollLeftPos.current - walk;
               updateScrollButtons();
             }}
-            className="flex overflow-x-auto gap-3 sm:gap-4 md:gap-6 relative z-10 w-full max-w-full items-center py-8 sm:py-10 md:py-12 px-4 sm:px-8 xl:px-12 custom-scrollbar snap-x snap-mandatory sm:snap-none touch-pan-x cursor-grab active:cursor-grabbing [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
+            className="flex justify-center overflow-x-auto gap-3 sm:gap-4 md:gap-6 relative z-10 w-full max-w-full items-center py-8 sm:py-10 md:py-12 px-4 sm:px-8 xl:px-12 custom-scrollbar snap-x snap-mandatory sm:snap-none touch-pan-x cursor-grab active:cursor-grabbing [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
          >
             {cards.map((card) => (
               <div key={card} className="shrink-0 snap-center flex justify-center">
