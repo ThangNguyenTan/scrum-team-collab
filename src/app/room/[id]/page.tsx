@@ -277,24 +277,6 @@ export default function RoomPage() {
           user={user} 
         />
 
-        {/* Mobile Squad Bar (Bottom) */}
-        <div className="lg:hidden fixed bottom-6 left-6 right-6 z-50 pointer-events-none">
-          <div className="glass h-12 rounded-full pointer-events-auto flex items-center justify-between px-6 shadow-2xl border border-white/10">
-            <div className="flex -space-x-2">
-               {sortedUsers.slice(0, 4).map(u => (
-                 <div key={u.id} className="h-7 w-7 rounded-full border border-[#0a0a0b] bg-indigo-500/20 flex items-center justify-center text-[10px] font-black ring-2 ring-[#0a0a0b]">
-                   {u.avatar || u.name.charAt(0).toUpperCase()}
-                 </div>
-               ))}
-               {sortedUsers.length > 4 && (
-                 <div className="h-7 w-7 rounded-full border border-[#0a0a0b] bg-zinc-800 flex items-center justify-center text-[8px] font-black ring-2 ring-[#0a0a0b]">
-                   +{sortedUsers.length - 4}
-                 </div>
-               )}
-            </div>
-          </div>
-        </div>
-
         <main className="flex-1 bg-black/40 overflow-hidden relative">
           {activeTab === "planning" ? (
              <PlanningBoard 

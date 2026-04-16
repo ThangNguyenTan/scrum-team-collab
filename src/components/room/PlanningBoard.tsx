@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useRef, useState } from "react";
 import { doc, updateDoc, setDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { Coffee, Zap, RefreshCw, EyeOff, Eye, CheckCircle2, Sparkles } from "lucide-react";
@@ -20,8 +20,16 @@ export function PlanningBoard({ room, roomId, users, isAdmin, currentUserId }: P
   const myVote = users.find((u) => u.id === currentUserId)?.vote;
   const allVoted = users.length > 0 && users.every((u) => u.vote);
 
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const isDragging = useRef(false);
+  const startX = useRef(0);
+  const scrollLeftPos = useRef(0);
+  const dragDelta = useRef(0);
+
   const handleVote = async (value: string) => {
     if (!currentUserId || room.revealed) return;
+    // Debounce vote if it was a drag
+    if (dragDelta.current > 5) return;
     await setDoc(doc(db, "rooms", roomId, "users", currentUserId), {
       vote: value === myVote ? null : value
     }, { merge: true });
@@ -68,7 +76,7 @@ export function PlanningBoard({ room, roomId, users, isAdmin, currentUserId }: P
       onClick={() => handleVote(card)}
       disabled={room.revealed}
       className={cn(
-        "flex flex-col items-center justify-center h-40 w-28 rounded-3xl border-3 transition-all group relative",
+        "flex flex-col items-center justify-center h-24 w-16 sm:h-32 sm:w-24 md:h-40 md:w-28 rounded-2xl md:rounded-3xl border-3 transition-all group relative",
         myVote === card 
           ? "bg-indigo-500 border-indigo-400 scale-110 shadow-[0_20px_60px_rgba(99,102,241,0.4)] z-20" 
           : "bg-black/60 border-white/10",
@@ -83,14 +91,14 @@ export function PlanningBoard({ room, roomId, users, isAdmin, currentUserId }: P
         </div>
       )}
       <span className={cn(
-        "text-4xl font-black transition-transform group-hover:scale-125 duration-500",
-        card === "☕" ? "text-3xl" : "",
+        "text-2xl sm:text-3xl md:text-4xl font-black transition-transform group-hover:scale-125 duration-500",
+        card === "☕" ? "text-xl sm:text-2xl md:text-3xl" : "",
         "text-white"
       )}>
         {card}
       </span>
       <span className={cn(
-        "text-xs uppercase font-black tracking-widest opacity-30 mt-3",
+        "text-[8px] sm:text-[10px] md:text-xs uppercase font-black tracking-widest opacity-30 mt-1 sm:mt-3",
         myVote === card ? "text-white opacity-80" : "text-white/40"
       )}>
         Points
@@ -99,21 +107,21 @@ export function PlanningBoard({ room, roomId, users, isAdmin, currentUserId }: P
   );
 
   return (
-    <div className="flex flex-col h-full gap-6 p-8 overflow-hidden">
+    <div className="flex flex-col h-full gap-4 md:gap-6 p-4 md:p-8 overflow-y-auto lg:overflow-hidden overflow-x-hidden pb-12 lg:pb-8">
       {/* 1. Header Controls for Planning */}
-      <div className="shrink-0 flex items-center justify-between bg-white/[0.03] border border-white/5 p-6 rounded-[2rem] shadow-xl">
-        <div className="flex flex-col gap-1">
-          <h2 className="text-3xl font-black flex items-center gap-4 text-white tracking-tight">
+      <div className="shrink-0 flex flex-col xl:flex-row lg:items-center justify-between gap-4 bg-white/[0.03] border border-white/5 p-4 md:p-6 rounded-[1.5rem] md:rounded-[2rem] shadow-xl">
+        <div className="flex flex-col gap-2 md:gap-1 overflow-x-auto w-full custom-scrollbar pb-2 xl:pb-0">
+          <h2 className="text-xl md:text-3xl font-black flex items-center gap-2 md:gap-4 text-white tracking-tight shrink-0 whitespace-nowrap">
             Sprint Planning
             {stats !== null && (
-              <div className="flex gap-3 items-center ml-2">
-                <span className="flex items-center gap-2 text-indigo-400 bg-indigo-500/10 px-4 py-1.5 rounded-xl text-lg border border-indigo-500/20 shadow-lg shadow-indigo-500/10">
+              <div className="flex gap-2 -sm md:gap-3 items-center ml-2">
+                <span className="flex items-center gap-1 md:gap-2 text-indigo-400 bg-indigo-500/10 px-2 md:px-4 py-1 md:py-1.5 rounded-lg md:rounded-xl text-sm md:text-lg border border-indigo-500/20 shadow-lg shadow-indigo-500/10">
                   Avg: <span className="font-bold text-white">{stats.avg}</span>
                 </span>
-                <span className="flex items-center gap-2 text-sky-400 bg-sky-500/10 px-4 py-1.5 rounded-xl text-lg border border-sky-500/20 shadow-lg shadow-sky-500/10">
+                <span className="flex items-center gap-1 md:gap-2 text-sky-400 bg-sky-500/10 px-2 md:px-4 py-1 md:py-1.5 rounded-lg md:rounded-xl text-sm md:text-lg border border-sky-500/20 shadow-lg shadow-sky-500/10">
                   Min: <span className="font-bold text-white">{stats.min}</span>
                 </span>
-                <span className="flex items-center gap-2 text-rose-400 bg-rose-500/10 px-4 py-1.5 rounded-xl text-lg border border-rose-500/20 shadow-lg shadow-rose-500/10">
+                <span className="flex items-center gap-1 md:gap-2 text-rose-400 bg-rose-500/10 px-2 md:px-4 py-1 md:py-1.5 rounded-lg md:rounded-xl text-sm md:text-lg border border-rose-500/20 shadow-lg shadow-rose-500/10">
                   Max: <span className="font-bold text-white">{stats.max}</span>
                 </span>
                 
@@ -129,15 +137,15 @@ export function PlanningBoard({ room, roomId, users, isAdmin, currentUserId }: P
                 </div>
               )}
             </h2>
-            <div className="flex items-center gap-6">
-              <div className="flex items-center gap-2">
+            <div className="flex items-center gap-4 sm:gap-6 mt-2 xl:mt-0">
+              <div className="flex items-center gap-2 shrink-0">
                 <span className="h-1.5 w-1.5 rounded-full bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.5)]"></span>
-                <p className="text-zinc-500 text-[10px] uppercase tracking-[0.2em] font-black font-mono">
-                  {users.filter((u) => u.vote).length} / {users.length} SQUAD READY
+                <p className="text-zinc-500 text-[9px] md:text-[10px] uppercase tracking-[0.2em] font-black font-mono">
+                  {users.filter((u) => u.vote).length} / {users.length} READY
                 </p>
               </div>
               {allVoted && !room.revealed && (
-                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-400 bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20 animate-pulse">
+                <span className="text-[8px] md:text-[10px] shrink-0 font-black uppercase tracking-[0.2em] text-emerald-400 bg-emerald-500/10 px-2 md:px-3 py-1 rounded-full border border-emerald-500/20 animate-pulse">
                   SCAN COMPLETED
                 </span>
               )}
@@ -145,10 +153,10 @@ export function PlanningBoard({ room, roomId, users, isAdmin, currentUserId }: P
           </div>
         
         {isAdmin && (
-          <div className="flex items-center gap-3">
+          <div className="flex items-center justify-center sm:justify-start w-full md:w-auto gap-2 sm:gap-3 shrink-0 border-t border-white/5 pt-4 md:pt-0 md:border-none mt-2 md:mt-0">
             <button 
               onClick={handleClear}
-              className="px-6 py-3 rounded-xl border border-white/10 bg-white/5 text-sm font-black text-zinc-400 hover:bg-white/10 hover:text-white transition-all active:scale-95 flex items-center gap-2"
+              className="px-3 sm:px-6 py-2.5 sm:py-3 rounded-xl border border-white/10 bg-white/5 text-xs sm:text-sm font-black text-zinc-400 hover:bg-white/10 hover:text-white transition-all active:scale-95 flex items-center gap-2"
             >
               <RefreshCw className="h-4 w-4" />
               Reset Board
@@ -156,7 +164,7 @@ export function PlanningBoard({ room, roomId, users, isAdmin, currentUserId }: P
             <button 
               onClick={handleReveal}
               className={cn(
-                "px-8 py-3 rounded-xl text-sm font-black transition-all active:scale-95 flex items-center gap-2",
+                "px-4 sm:px-8 py-2.5 sm:py-3 rounded-xl text-xs sm:text-sm font-black transition-all active:scale-95 flex items-center gap-2",
                 room.revealed 
                   ? "bg-white text-black shadow-[0_15px_40px_rgba(255,255,255,0.2)]" 
                   : allVoted 
@@ -164,37 +172,36 @@ export function PlanningBoard({ room, roomId, users, isAdmin, currentUserId }: P
                     : "bg-indigo-500 text-white shadow-[0_15px_40px_rgba(99,102,241,0.2)]"
               )}
             >
-              {room.revealed ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-              {room.revealed ? "Hide Results" : allVoted ? "Ready to Reveal" : "Reveal Votes"}
+              {room.revealed ? <EyeOff className="h-3 w-3 sm:h-4 sm:w-4" /> : <Eye className="h-3 w-3 sm:h-4 sm:w-4" />}
+              {room.revealed ? "Hide Results" : allVoted ? "Ready" : "Reveal"}
             </button>
           </div>
         )}
       </div>
 
-      {/* 2. The Table (Estimation Board / Results) */}
-      <div className="flex-grow min-h-0 bg-black/20 rounded-[3rem] p-2 border border-white/[0.02] flex flex-col">
-          <div className="flex-1 overflow-y-auto custom-scrollbar p-6">
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-6">
+      <div className="flex-shrink-0 lg:flex-shrink lg:flex-grow min-h-[300px] lg:min-h-0 bg-black/20 rounded-[2rem] md:rounded-[3rem] p-1 md:p-2 border border-white/[0.02] flex flex-col">
+          <div className="flex-1 overflow-y-auto lg:overflow-y-auto custom-scrollbar p-2 sm:p-4 md:p-6">
+            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-3 sm:gap-4 md:gap-6">
               {users.map((u) => (
                 <div 
                   key={u.id}
                   className={cn(
-                    "flex flex-col items-center justify-center p-8 rounded-[2.5rem] border transition-all duration-700",
+                    "flex flex-col items-center justify-center p-2 sm:p-6 md:p-8 rounded-[1.5rem] md:rounded-[2.5rem] border transition-all duration-700",
                     room.revealed && u.vote 
-                      ? "bg-indigo-500/5 border-indigo-500/40 shadow-[0_0_60px_rgba(99,102,241,0.1)] scale-105" 
+                      ? "bg-indigo-500/5 border-indigo-500/40 shadow-[0_0_40px_rgba(99,102,241,0.1)] scale-105" 
                       : "bg-white/[0.02] border-white/5"
                   )}
                 >
                   <div className={cn(
-                    "h-36 w-28 rounded-2xl flex items-center justify-center transition-all duration-1000 perspective-1000 group/card cursor-pointer mb-8",
+                    "h-24 w-16 sm:h-28 sm:w-20 md:h-36 md:w-28 rounded-xl md:rounded-2xl flex items-center justify-center transition-all duration-1000 perspective-1000 group/card cursor-pointer mb-4 md:mb-8",
                     room.revealed ? "rotate-0 scale-110" : u.vote ? "rotate-y-180" : "opacity-10 scale-90"
                   )}>
                       {room.revealed ? (
                         <div className="h-full w-full rounded-2xl bg-white text-black flex flex-col items-center justify-center shadow-[0_25px_50px_rgba(0,0,0,0.5)] relative overflow-hidden ring-1 ring-white/20">
                           <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/10 to-transparent"></div>
-                          <div className="absolute top-3 left-3 text-[10px] opacity-30 font-black tracking-tighter uppercase">ESTM</div>
-                          <div className="absolute bottom-3 right-3 text-[10px] opacity-30 font-black tracking-tighter self-end rotate-180 uppercase">ESTM</div>
-                          <span className="text-7xl font-black tracking-tighter mt-1">{u.vote === "☕" ? <Coffee className="h-12 w-12" /> : (u.vote || "-")}</span>
+                          <div className="absolute top-1 left-1 md:top-3 md:left-3 text-[8px] md:text-[10px] opacity-30 font-black tracking-tighter uppercase">ESTM</div>
+                          <div className="absolute bottom-1 right-1 md:bottom-3 md:right-3 text-[8px] md:text-[10px] opacity-30 font-black tracking-tighter self-end rotate-180 uppercase">ESTM</div>
+                          <span className="text-4xl md:text-7xl font-black tracking-tighter mt-1">{u.vote === "☕" ? <Coffee className="h-8 w-8 md:h-12 md:w-12" /> : (u.vote || "-")}</span>
                         </div>
                       ) : (
                         <div className={cn(
@@ -228,19 +235,38 @@ export function PlanningBoard({ room, roomId, users, isAdmin, currentUserId }: P
           </div>
       </div>
 
-      {/* 3. The Hand (Selectable Deck) */}
-      <div className="shrink-0 flex flex-col items-center justify-center p-8 rounded-[3rem] bg-indigo-500/[0.02] border border-indigo-500/10 relative overflow-hidden backdrop-blur-3xl mt-auto">
+      <div className="shrink-0 flex flex-col items-center justify-center p-4 md:p-8 rounded-[2rem] md:rounded-[3rem] bg-indigo-500/[0.02] border border-indigo-500/10 relative overflow-hidden backdrop-blur-3xl mt-auto z-10">
          <div className="absolute inset-0 bg-gradient-to-t from-indigo-500/5 to-transparent"></div>
          
-         <div className="flex flex-col gap-6 relative z-10 w-full max-w-7xl mx-auto items-center">
-            {/* Lower Sequence */}
-            <div className="flex flex-wrap justify-center gap-6">
-              {cards.slice(0, 7).map(renderCard)}
-            </div>
-            {/* Higher Sequence & Extras */}
-            <div className="flex flex-wrap justify-center gap-6">
-              {cards.slice(7).map(renderCard)}
-            </div>
+         <div 
+            ref={scrollRef}
+            onMouseDown={(e) => {
+              if (!scrollRef.current) return;
+              isDragging.current = true;
+              dragDelta.current = 0;
+              startX.current = e.pageX - scrollRef.current.offsetLeft;
+              scrollLeftPos.current = scrollRef.current.scrollLeft;
+            }}
+            onMouseLeave={() => { isDragging.current = false; }}
+            onMouseUp={() => { 
+              isDragging.current = false; 
+              setTimeout(() => { dragDelta.current = 0; }, 50);
+            }}
+            onMouseMove={(e) => {
+              if (!isDragging.current || !scrollRef.current) return;
+              e.preventDefault();
+              const x = e.pageX - scrollRef.current.offsetLeft;
+              const walk = (x - startX.current) * 1.5;
+              dragDelta.current += Math.abs(walk);
+              scrollRef.current.scrollLeft = scrollLeftPos.current - walk;
+            }}
+            className="flex sm:flex-wrap overflow-x-auto sm:overflow-x-visible justify-start sm:justify-center gap-3 sm:gap-4 md:gap-6 relative z-10 w-full max-w-7xl mx-auto items-center py-6 sm:py-0 px-2 sm:px-0 custom-scrollbar snap-x snap-mandatory touch-pan-x cursor-grab active:cursor-grabbing [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
+         >
+            {cards.map((card) => (
+              <div key={card} className="shrink-0 snap-center sm:snap-none flex justify-center first:ml-auto last:mr-auto sm:first:ml-0 sm:last:mr-0">
+                {renderCard(card)}
+              </div>
+            ))}
          </div>
          <p className="mt-5 text-xs font-black text-zinc-600 uppercase tracking-[0.4em] animate-pulse">Select your estimation card</p>
       </div>

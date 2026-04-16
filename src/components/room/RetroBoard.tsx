@@ -222,23 +222,23 @@ export function RetroBoard({
   };
 
   return (
-    <div className="flex flex-col gap-8 h-full p-8 overflow-hidden">
-      <div className="shrink-0 flex items-center justify-between bg-white/[0.02] border border-white/5 p-6 rounded-[2rem]">
-        <div className="flex flex-col gap-1">
-          <h2 className="text-3xl font-black flex items-center gap-4 text-white tracking-tight">
-            Retro Session
-            <span className="text-purple-400 bg-purple-500/10 px-4 py-1 rounded-xl text-sm border border-purple-500/20 shadow-lg shadow-purple-500/10 uppercase tracking-widest font-black">
-              {cards.length} INSIGHTS
-            </span>
-          </h2>
-          <p className="text-zinc-500 text-xs uppercase tracking-[0.3em] font-black font-mono">Archive sprint learnings with team-weighted priorities</p>
-        </div>
-        
-        <div className="flex items-center gap-3">
+    <div className="flex flex-col gap-4 sm:gap-8 h-full p-4 md:p-8 overflow-hidden">
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 bg-white/[0.02] border border-white/5 p-4 md:p-6 rounded-[1.5rem] md:rounded-[2rem]">
+          <div className="flex flex-col gap-1 w-full">
+            <h2 className="text-2xl md:text-3xl font-black flex flex-wrap items-center gap-2 md:gap-4 text-white tracking-tight">
+              Retro Session
+              <span className="text-purple-400 bg-purple-500/10 px-3 py-1 md:px-4 md:py-1 rounded-xl text-xs md:text-sm border border-purple-500/20 shadow-lg shadow-purple-500/10 uppercase tracking-widest font-black">
+                {cards.length} INSIGHTS
+              </span>
+            </h2>
+            <p className="text-zinc-500 text-xs uppercase tracking-[0.3em] font-black font-mono mt-1">Archive sprint learnings with team priorities</p>
+          </div>
+          
+          <div className="flex w-full md:w-auto items-center justify-end gap-2 sm:gap-3">
           {isAdmin && (
              <button 
               onClick={addColumn}
-              className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 py-3 px-6 text-sm font-black text-zinc-400 hover:bg-white/10 hover:text-white transition-all active:scale-95"
+              className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 py-2.5 px-4 md:py-3 md:px-6 text-xs md:text-sm font-black text-zinc-400 hover:bg-white/10 hover:text-white transition-all active:scale-95"
              >
                <Plus className="h-4 w-4" />
                New Stream
@@ -267,12 +267,12 @@ export function RetroBoard({
 
       <div 
         ref={boardRef}
-        className="flex-1 flex gap-12 overflow-x-auto p-12 pb-24 custom-scrollbar"
+        className="flex-1 flex flex-col lg:flex-row gap-6 md:gap-12 overflow-y-auto lg:overflow-x-auto overflow-x-hidden p-2 sm:p-4 md:p-12 pb-24 md:pb-24 custom-scrollbar"
       >
         {columns.map((col) => (
           <div 
             key={col.id} 
-            className="flex flex-col min-w-[500px] w-[500px] shrink-0 group/col"
+            className="flex flex-col w-full lg:min-w-[500px] lg:w-[500px] shrink-0 group/col"
           >
              <div className="flex items-center justify-between mb-6 px-4">
                 <div className="flex items-center gap-3">

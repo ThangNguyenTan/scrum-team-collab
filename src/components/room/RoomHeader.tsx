@@ -28,13 +28,13 @@ export function RoomHeader({
   onLogoClick
 }: RoomHeaderProps) {
   return (
-    <header className="h-16 flex items-center justify-between px-6 border-b border-white/5 bg-black/60 backdrop-blur-xl shrink-0 z-50">
-      <div className="flex items-center gap-6">
-        <div className="flex items-center gap-3 cursor-pointer group" onClick={onLogoClick}>
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-500 shadow-[0_0_15px_rgba(99,102,241,0.2)] transition-transform group-hover:scale-110">
-             <Zap className="h-4 w-4 text-white" />
+    <header className="h-16 flex items-center justify-between px-3 sm:px-6 border-b border-white/5 bg-black/60 backdrop-blur-xl shrink-0 z-50">
+      <div className="flex items-center gap-2 sm:gap-6">
+        <div className="flex items-center gap-2 sm:gap-3 cursor-pointer group" onClick={onLogoClick}>
+          <div className="flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-lg bg-indigo-500 shadow-[0_0_15px_rgba(99,102,241,0.2)] transition-transform group-hover:scale-110">
+             <Zap className="h-3 w-3 sm:h-4 sm:w-4 text-white" />
           </div>
-          <span className="font-black tracking-tighter text-lg">SCRUM_COLLAB</span>
+          <span className="font-black tracking-tighter text-sm sm:text-lg hidden md:block">SCRUM_COLLAB</span>
         </div>
         
         <div className="h-6 w-[1px] bg-white/10 hidden md:block"></div>
@@ -50,8 +50,8 @@ export function RoomHeader({
         </div>
       </div>
 
-      <div className="flex items-center gap-3">
-        <div className="flex p-1 rounded-xl bg-white/5 border border-white/10 mr-4">
+      <div className="flex items-center gap-2 sm:gap-3">
+        <div className="flex p-0.5 sm:p-1 rounded-xl bg-white/5 border border-white/10 mr-1 sm:mr-4">
           <button 
             onClick={() => handleTabSwitch("planning")}
             className={cn(
@@ -72,15 +72,15 @@ export function RoomHeader({
           </button>
         </div>
         
-        <div className="flex items-center gap-2 text-base text-zinc-400 bg-white/5 px-3 py-1.5 rounded-lg border border-white/5">
+        <div className="hidden sm:flex items-center gap-2 text-xs sm:text-base text-zinc-400 bg-white/5 px-2 sm:px-3 py-1.5 rounded-lg border border-white/5">
            <div className="h-2 w-2 rounded-full bg-emerald-500"></div>
-           {users.length} Team Members
+           {users.length} Team
         </div>
         
         <button 
           onClick={() => copyToClipboard(window.location.href, setInviteFeedback)}
           className={cn(
-            "flex items-center gap-2 rounded-xl border px-4 py-2 text-base font-semibold transition-all active:scale-95",
+            "flex items-center gap-2 rounded-xl border px-3 sm:px-4 py-2 text-xs sm:text-base font-semibold transition-all active:scale-95",
             inviteFeedback 
               ? "bg-emerald-500/10 border-emerald-500/50 text-emerald-400" 
               : "bg-white/5 border-white/10 hover:bg-white/10 text-white"
@@ -88,13 +88,13 @@ export function RoomHeader({
         >
           {inviteFeedback ? (
             <>
-              <CheckCircle2 className="h-4 w-4" />
-              Copied!
+              <CheckCircle2 className="h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">Copied!</span>
             </>
           ) : (
             <>
-              <Share2 className="h-4 w-4" />
-              Invite
+              <Share2 className="h-3 w-3 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">Invite</span>
             </>
           )}
         </button>

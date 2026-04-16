@@ -130,16 +130,16 @@ export default function Home() {
       <LandingNavbar />
 
       {/* Hero Section */}
-      <main className="relative flex-grow flex flex-col items-center justify-center overflow-hidden pt-32 pb-12">
+      <main className="relative flex-grow flex flex-col items-center justify-center overflow-hidden pt-24 sm:pt-32 pb-12">
         {/* Engineering Mesh Gradients */}
         <div className="absolute top-[-10%] left-[-10%] -z-10 h-[60%] w-[60%] rounded-full bg-indigo-500/10 blur-[120px]"></div>
         <div className="absolute bottom-[-10%] right-[-10%] -z-10 h-[50%] w-[50%] rounded-full bg-purple-600/10 blur-[120px]"></div>
         <div className="absolute top-[20%] right-[10%] -z-10 h-[30%] w-[30%] rounded-full bg-emerald-500/5 blur-[100px]"></div>
 
-        <div className="mx-auto max-w-7xl px-6 text-center z-10">
-          <div className="flex flex-col items-center gap-16 animate-in fade-in slide-in-from-bottom-8 duration-1000">
-            <div className="flex flex-col items-center gap-6">
-              <div className="inline-flex items-center gap-2 rounded-full border border-indigo-500/30 bg-indigo-500/5 px-4 py-2 backdrop-blur-md">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 text-center z-10 w-full">
+          <div className="flex flex-col items-center gap-10 sm:gap-16 animate-in fade-in slide-in-from-bottom-8 duration-1000 w-full">
+            <div className="flex flex-col items-center gap-4 sm:gap-6 w-full">
+              <div className="inline-flex items-center gap-2 rounded-full border border-indigo-500/30 bg-indigo-500/5 px-3 sm:px-4 py-1.5 sm:py-2 backdrop-blur-md">
                 <span className="relative flex h-2 w-2">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-500"></span>
@@ -147,7 +147,7 @@ export default function Home() {
                 <span className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-300">Fast-Track Agile v2.0</span>
               </div>
               
-              <h1 className="text-5xl font-black tracking-tighter text-white sm:text-7xl lg:text-8xl leading-[0.85]">
+              <h1 className="text-4xl font-black tracking-tighter text-white sm:text-6xl lg:text-8xl leading-[0.95] sm:leading-[0.85] w-full px-2">
                 Agile speed <br />
                 <span className="bg-gradient-to-r from-indigo-400 via-emerald-400 to-indigo-400 bg-clip-text text-transparent">redefined.</span>
               </h1>
@@ -160,7 +160,7 @@ export default function Home() {
 
             <div className="w-full max-w-lg relative z-50 glass p-2 rounded-[2.5rem] shadow-2xl">
               <form onSubmit={createRoom} className="flex flex-col gap-3 bg-[#0a0a0b] p-6 rounded-[2rem] border border-white/5">
-                <div className="flex items-center justify-between mb-2">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-2 gap-1 sm:gap-0">
                   <span className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500">Creator Identity</span>
                   <span className="text-[10px] font-mono text-zinc-600">ID: {user?.uid?.slice(0, 8) || "ANON-0X"}</span>
                 </div>
@@ -171,7 +171,7 @@ export default function Home() {
                       type="button"
                       onClick={() => setShowEmojiPicker(!showEmojiPicker)}
                       className={cn(
-                        "h-[68px] w-[68px] rounded-2xl bg-zinc-900 border border-white/5 flex items-center justify-center text-3xl transition-all hover:bg-white/5 active:scale-95",
+                        "h-[56px] w-[56px] sm:h-[68px] sm:w-[68px] rounded-2xl bg-zinc-900 border border-white/5 flex items-center justify-center text-2xl sm:text-3xl transition-all hover:bg-white/5 active:scale-95 shrink-0",
                         showEmojiPicker && "ring-2 ring-indigo-500/50 border-indigo-500/30"
                       )}
                     >
@@ -198,9 +198,9 @@ export default function Home() {
                       placeholder="Identify yourself..."
                       value={name}
                       onChange={(e) => setName(e.target.value)}
-                      className="w-full rounded-2xl bg-zinc-900 border border-white/5 px-6 py-5 text-base font-bold text-white placeholder:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 transition-all duration-300"
+                      className="w-full rounded-2xl bg-zinc-900 border border-white/5 px-4 sm:px-6 py-4 sm:py-5 text-sm sm:text-base font-bold text-white placeholder:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 transition-all duration-300"
                     />
-                    <div className="absolute right-4 top-1/2 -translate-y-1/2 opacity-0 group-focus-within/field:opacity-100 transition-opacity">
+                    <div className="absolute right-3 sm:right-4 top-1/2 -translate-y-1/2 opacity-0 group-focus-within/field:opacity-100 transition-opacity hidden sm:block">
                       <span className="text-[9px] font-mono text-indigo-400">READY__</span>
                     </div>
                   </div>
@@ -227,7 +227,7 @@ export default function Home() {
               </form>
             </div>
 
-            <div id="feature-grid" className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 w-full mt-24">
+            <div id="feature-grid" className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 w-full mt-16 sm:mt-24 px-2 sm:px-0">
               {FEATURES.map((feature, i) => (
                 <FeatureCard key={i} feature={feature} index={i} />
               ))}
