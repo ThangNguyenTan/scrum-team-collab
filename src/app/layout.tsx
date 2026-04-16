@@ -31,6 +31,10 @@ export const metadata: Metadata = {
     title: "ScrumCollab | Ultra-Fast Agile Tools",
     description: "Eliminate friction in your Sprint Planning and Retrospectives.",
   },
+  icons: {
+    icon: "/icon.svg",
+    apple: "/icon.svg",
+  },
 };
 
 export default function RootLayout({
