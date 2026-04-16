@@ -1,7 +1,7 @@
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState, useEffect } from "react";
 import { doc, updateDoc, setDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { Coffee, Zap, RefreshCw, EyeOff, Eye, CheckCircle2, Sparkles } from "lucide-react";
+import { Coffee, Zap, RefreshCw, EyeOff, Eye, CheckCircle2, Sparkles, ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { RoomData, RoomUser } from "@/types";
 import { PLANNING_CARDS } from "@/constants";
@@ -21,10 +21,65 @@ export function PlanningBoard({ room, roomId, users, isAdmin, currentUserId }: P
   const allVoted = users.length > 0 && users.every((u) => u.vote);
 
   const scrollRef = useRef<HTMLDivElement>(null);
+  const scrollAnimation = useRef<number | null>(null);
   const isDragging = useRef(false);
   const startX = useRef(0);
   const scrollLeftPos = useRef(0);
   const dragDelta = useRef(0);
+  
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(true);
+
+  const updateScrollButtons = () => {
+    if (!scrollRef.current) return;
+    const { scrollLeft, scrollWidth, clientWidth } = scrollRef.current;
+    setCanScrollLeft(Math.ceil(scrollLeft) > 0);
+    // Be a bit more forgiving with the right threshold for subpixel scrolling
+    setCanScrollRight(Math.ceil(scrollLeft) < scrollWidth - clientWidth - 2);
+  };
+
+  useEffect(() => {
+    updateScrollButtons();
+    // Safety sync after layout paint
+    const tId = setTimeout(updateScrollButtons, 150);
+    const tId2 = setTimeout(updateScrollButtons, 500);
+    
+    window.addEventListener('resize', updateScrollButtons);
+    return () => {
+      clearTimeout(tId);
+      clearTimeout(tId2);
+      window.removeEventListener('resize', updateScrollButtons);
+    }
+  }, []);
+
+  const handleHoverScroll = (direction: 'left' | 'right') => {
+    if (scrollAnimation.current) cancelAnimationFrame(scrollAnimation.current);
+    
+    const scrollStep = () => {
+      if (!scrollRef.current) return;
+      
+      const el = scrollRef.current;
+      const prev = el.scrollLeft;
+      el.scrollLeft += direction === 'left' ? -12 : 12;
+      
+      // Keep going if we actually moved
+      if (el.scrollLeft !== prev) {
+        scrollAnimation.current = requestAnimationFrame(scrollStep);
+      } else {
+        // We hit the edge, make sure buttons sync up immediately
+        updateScrollButtons();
+      }
+    };
+    
+    scrollAnimation.current = requestAnimationFrame(scrollStep);
+  };
+
+  const stopHoverScroll = () => {
+    if (scrollAnimation.current) {
+      cancelAnimationFrame(scrollAnimation.current);
+      scrollAnimation.current = null;
+    }
+  };
 
   const handleVote = async (value: string) => {
     if (!currentUserId || room.revealed) return;
@@ -235,11 +290,36 @@ export function PlanningBoard({ room, roomId, users, isAdmin, currentUserId }: P
           </div>
       </div>
 
-      <div className="shrink-0 flex flex-col items-center justify-center p-3 md:p-4 xl:p-8 rounded-2xl xl:rounded-[3rem] bg-indigo-500/[0.02] border border-indigo-500/10 relative overflow-hidden backdrop-blur-3xl mt-auto z-10">
-         <div className="absolute inset-0 bg-gradient-to-t from-indigo-500/5 to-transparent"></div>
+      <div className="shrink-0 flex flex-col items-center justify-center p-3 md:p-4 xl:p-8 rounded-2xl xl:rounded-[3rem] bg-indigo-500/[0.02] border border-indigo-500/10 relative overflow-hidden backdrop-blur-3xl mt-auto z-10 group/deck">
+         <div className="absolute inset-0 bg-gradient-to-t from-indigo-500/5 to-transparent pointer-events-none"></div>
          
+         {/* Left Edge Indicator & Hover Zone */}
+         <div 
+           className={cn(
+             "absolute left-0 top-0 bottom-0 w-16 md:w-24 lg:w-32 bg-gradient-to-r from-black/80 via-black/40 to-transparent z-40 transition-opacity duration-300 flex items-center justify-start pl-2 md:pl-4",
+             canScrollLeft ? "opacity-100 cursor-w-resize" : "opacity-0 pointer-events-none"
+           )}
+           onMouseEnter={() => handleHoverScroll('left')}
+           onMouseLeave={stopHoverScroll}
+         >
+           <ChevronLeft className="h-6 w-6 md:h-8 md:w-8 text-white/50 animate-pulse drop-shadow-xl" />
+         </div>
+
+         {/* Right Edge Indicator & Hover Zone */}
+         <div 
+           className={cn(
+             "absolute right-0 top-0 bottom-0 w-16 md:w-24 lg:w-32 bg-gradient-to-l from-black/80 via-black/40 to-transparent z-40 transition-opacity duration-300 flex items-center justify-end pr-2 md:pr-4",
+             canScrollRight ? "opacity-100 cursor-e-resize" : "opacity-0 pointer-events-none"
+           )}
+           onMouseEnter={() => handleHoverScroll('right')}
+           onMouseLeave={stopHoverScroll}
+         >
+           <ChevronRight className="h-6 w-6 md:h-8 md:w-8 text-white/50 animate-pulse drop-shadow-xl" />
+         </div>
+
          <div 
             ref={scrollRef}
+            onScroll={updateScrollButtons}
             onMouseDown={(e) => {
               if (!scrollRef.current) return;
               isDragging.current = true;
@@ -247,7 +327,7 @@ export function PlanningBoard({ room, roomId, users, isAdmin, currentUserId }: P
               startX.current = e.pageX - scrollRef.current.offsetLeft;
               scrollLeftPos.current = scrollRef.current.scrollLeft;
             }}
-            onMouseLeave={() => { isDragging.current = false; }}
+            onMouseLeave={() => { isDragging.current = false; stopHoverScroll(); }}
             onMouseUp={() => { 
               isDragging.current = false; 
               setTimeout(() => { dragDelta.current = 0; }, 50);
@@ -259,11 +339,12 @@ export function PlanningBoard({ room, roomId, users, isAdmin, currentUserId }: P
               const walk = (x - startX.current) * 1.5;
               dragDelta.current += Math.abs(walk);
               scrollRef.current.scrollLeft = scrollLeftPos.current - walk;
+              updateScrollButtons();
             }}
-            className="flex sm:flex-wrap overflow-x-auto sm:overflow-x-visible justify-start sm:justify-center gap-3 sm:gap-4 md:gap-6 relative z-10 w-full max-w-7xl mx-auto items-center py-6 sm:py-0 px-2 sm:px-0 custom-scrollbar snap-x snap-mandatory touch-pan-x cursor-grab active:cursor-grabbing [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
+            className="flex overflow-x-auto gap-3 sm:gap-4 md:gap-6 relative z-10 w-full max-w-full items-center py-8 sm:py-10 md:py-12 px-4 sm:px-8 xl:px-12 custom-scrollbar snap-x snap-mandatory sm:snap-none touch-pan-x cursor-grab active:cursor-grabbing [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
          >
             {cards.map((card) => (
-              <div key={card} className="shrink-0 snap-center sm:snap-none flex justify-center first:ml-auto last:mr-auto sm:first:ml-0 sm:last:mr-0">
+              <div key={card} className="shrink-0 snap-center flex justify-center">
                 {renderCard(card)}
               </div>
             ))}
