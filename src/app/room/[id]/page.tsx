@@ -631,6 +631,7 @@ export default function RoomPage() {
 
 // --- FEATURE A: Planning Poker Board ---
 function PlanningBoard({ room, roomId, users, isAdmin, currentUserId }: any) {
+  if (!room) return null;
   const cards = ["0", "1", "2", "3", "5", "8", "13", "21", "34", "55", "89", "?", "☕"];
   const myVote = users.find((u: any) => u.id === currentUserId)?.vote;
   const allVoted = users.length > 0 && users.every((u: any) => u.vote);
@@ -865,6 +866,7 @@ function PlanningBoard({ room, roomId, users, isAdmin, currentUserId }: any) {
 
 // --- FEATURE B: Retrospective Board ---
 function RetroBoard({ room, roomId, users, columns, cards, isAdmin, currentUserId, displayName, avatar }: any) {
+  if (!room) return null;
   const [newCardText, setNewCardText] = useState("");
   const [newCardImage, setNewCardImage] = useState("");
   const [editingCardId, setEditingCardId] = useState<string | null>(null);
@@ -921,14 +923,20 @@ function RetroBoard({ room, roomId, users, columns, cards, isAdmin, currentUserI
 
   const addCard = async (colId: string) => {
     if (!newCardText.trim() && !newCardImage.trim()) return;
+    
+    // Fallback to local state if for some reason the user document isn't fully loaded
+    const currentUserData = users.find((u: any) => u.id === currentUserId);
+    const finalName = currentUserData?.name || displayName || (isAdmin ? room?.creatorName : "") || "Team Member";
+    const finalAvatar = currentUserData?.avatar || avatar || "";
+
     await addDoc(collection(db, "rooms", roomId, "cards"), {
       columnId: colId,
       text: newCardText.trim(),
       imageUrl: newCardImage.trim() || null,
       upvotes: [],
-      authorName: displayName || (isAdmin ? room?.creatorName : "") || "Team Member",
+      authorName: finalName,
       authorId: currentUserId,
-      authorAvatar: avatar || "",
+      authorAvatar: finalAvatar,
       createdAt: serverTimestamp()
     });
     setNewCardText("");
