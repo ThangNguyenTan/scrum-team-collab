@@ -13,11 +13,12 @@ import {
   serverTimestamp 
 } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
-import { LayoutPanelLeft, Users, Zap, CheckCircle2, ChevronRight, LogOut, Smile } from "lucide-react";
+import { Zap, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import EmojiPicker, { Theme } from "emoji-picker-react";
-
-const EMOJIS = ["🚀", "🔥", "🐱", "🐶", "🦊", "🐼", "🦁", "🦖", "🛸", "🧠", "💎", "🌈", "☀️", "🌙", "⭐", "🦾", "🎨", "🎭", "🎮", "🎸"];
+import { EMOJIS, FEATURES } from "@/constants";
+import { LandingNavbar } from "@/components/landing/LandingNavbar";
+import { FeatureCard } from "@/components/landing/FeatureCard";
 
 export default function Home() {
   const [user, setUser] = useState<User | null>(null);
@@ -126,23 +127,7 @@ export default function Home() {
 
   return (
     <div className="flex flex-col min-h-screen bg-[#0a0a0b] text-white selection:bg-indigo-500/30">
-      {/* Navigation */}
-      <nav className="fixed top-6 left-6 right-6 z-50 flex items-center justify-center pointer-events-none">
-        <div className="mx-auto flex h-14 w-full max-w-7xl items-center justify-between px-6 pointer-events-auto rounded-[1.25rem] border border-white/5 bg-black/40 backdrop-blur-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
-          <div className="flex items-center gap-3">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-500 shadow-[0_0_15px_rgba(99,102,241,0.2)]">
-              <Zap className="h-4 w-4 text-white" />
-            </div>
-            <span className="text-lg font-black tracking-tighter text-white">ScrumCollab</span>
-          </div>
-          
-          <div className="flex items-center gap-6">
-            <div className="hidden sm:flex items-center gap-2 text-[9px] font-black uppercase tracking-[0.2em] text-zinc-500 bg-white/5 px-3 py-1.5 rounded-full border border-white/5">
-               Vibe: <span className="text-emerald-500">Tactical</span>
-            </div>
-          </div>
-        </div>
-      </nav>
+      <LandingNavbar />
 
       {/* Hero Section */}
       <main className="relative flex-grow flex flex-col items-center justify-center overflow-hidden pt-32 pb-12">
@@ -243,36 +228,8 @@ export default function Home() {
             </div>
 
             <div id="feature-grid" className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 w-full mt-24">
-              {[
-                { title: "Planning Poker", desc: "Fibonacci-based voting with instant extraction.", icon: Zap, color: "indigo", styles: "hover:border-indigo-500/30", iconStyles: "bg-indigo-500/10 text-indigo-400" },
-                { title: "Retrospectives", desc: "Kanban orchestration with weighted voting.", icon: LayoutPanelLeft, color: "purple", styles: "hover:border-purple-500/30", iconStyles: "bg-purple-500/10 text-purple-400" },
-                { title: "Dynamic Sync", desc: "Identity-less collaboration. Zero setup friction.", icon: Users, color: "pink", styles: "hover:border-pink-500/30", iconStyles: "bg-pink-500/10 text-pink-400" },
-                { title: "Deep Data", desc: "Generate schema-compliant PDF or CSV archives.", icon: CheckCircle2, color: "emerald", styles: "hover:border-emerald-500/30", iconStyles: "bg-emerald-500/10 text-emerald-400" }
-              ].map((f, i) => (
-                <div 
-                  key={i} 
-                  className={cn(
-                    "feature-card group glass-card p-10 transition-all hover:bg-white/[0.04] opacity-0 translate-y-8 h-full relative flex flex-col items-center text-center",
-                    f.styles
-                  )}
-                >
-                  <div className={cn(
-                    "mb-8 flex h-20 w-20 items-center justify-center rounded-[2rem] transition-transform group-hover:scale-110 duration-500 shadow-xl",
-                    f.iconStyles
-                  )}>
-                    <f.icon className="h-10 w-10" />
-                  </div>
-                  <div className="space-y-4">
-                    <h3 className="text-lg font-black uppercase tracking-tight flex items-center justify-center gap-3">
-                      <span className="text-[10px] font-mono text-zinc-700 opacity-50">0{i+1}</span>
-                      {f.title}
-                    </h3>
-                    <p className="text-zinc-500 text-[13px] leading-relaxed max-w-[240px] mx-auto font-medium">{f.desc}</p>
-                  </div>
-                  
-                  {/* Decorative Engineering Lines */}
-                  <div className="absolute bottom-0 left-0 h-[1.5px] w-0 bg-gradient-to-r from-transparent via-white/20 to-transparent group-hover:w-full transition-all duration-700"></div>
-                </div>
+              {FEATURES.map((feature, i) => (
+                <FeatureCard key={i} feature={feature} index={i} />
               ))}
             </div>
           </div>
@@ -282,7 +239,7 @@ export default function Home() {
       {/* Footer */}
       <footer className="border-t border-white/5 py-12">
         <div className="mx-auto max-w-7xl px-6 text-center text-sm text-zinc-500">
-          © 2026 ScrumCollab. Built for high-performance agile teams.
+          © {new Date().getFullYear()} ScrumCollab. Built for high-performance agile teams.
         </div>
       </footer>
     </div>
