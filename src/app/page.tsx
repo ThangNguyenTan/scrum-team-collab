@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { 
   onAuthStateChanged, 
@@ -15,6 +15,7 @@ import {
 import { auth, db } from "@/lib/firebase";
 import { LayoutPanelLeft, Users, Zap, CheckCircle2, ChevronRight, LogOut, Smile } from "lucide-react";
 import { cn } from "@/lib/utils";
+import EmojiPicker, { Theme } from "emoji-picker-react";
 
 const EMOJIS = ["🚀", "🔥", "🐱", "🐶", "🦊", "🐼", "🦁", "🦖", "🛸", "🧠", "💎", "🌈", "☀️", "🌙", "⭐", "🦾", "🎨", "🎭", "🎮", "🎸"];
 
@@ -25,7 +26,20 @@ export default function Home() {
   const [name, setName] = useState("");
   const [avatar, setAvatar] = useState(EMOJIS[0]);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const emojiPickerRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (emojiPickerRef.current && !emojiPickerRef.current.contains(event.target as Node)) {
+        setShowEmojiPicker(false);
+      }
+    }
+    if (showEmojiPicker) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [showEmojiPicker]);
 
   useEffect(() => {
     const observer = new IntersectionObserver((entries) => {
@@ -159,7 +173,7 @@ export default function Home() {
               </p>
             </div>
 
-            <div className="w-full max-w-lg glass p-2 rounded-[2.5rem] shadow-2xl">
+            <div className="w-full max-w-lg relative z-50 glass p-2 rounded-[2.5rem] shadow-2xl">
               <form onSubmit={createRoom} className="flex flex-col gap-3 bg-[#0a0a0b] p-6 rounded-[2rem] border border-white/5">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500">Creator Identity</span>
@@ -167,7 +181,7 @@ export default function Home() {
                 </div>
                 
                 <div className="relative group/input flex items-center gap-3">
-                  <div className="relative">
+                  <div className="relative" ref={emojiPickerRef}>
                     <button
                       type="button"
                       onClick={() => setShowEmojiPicker(!showEmojiPicker)}
@@ -180,25 +194,14 @@ export default function Home() {
                     </button>
 
                     {showEmojiPicker && (
-                      <div className="absolute top-20 left-0 z-50 w-64 bg-[#1a1a1c] p-4 rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] border border-white/10 animate-in fade-in zoom-in duration-200">
-                        <div className="grid grid-cols-5 gap-2">
-                          {EMOJIS.map(e => (
-                            <button 
-                              key={e}
-                              type="button"
-                              onClick={() => {
-                                setAvatar(e);
-                                setShowEmojiPicker(false);
-                              }}
-                              className={cn(
-                                "h-10 w-10 flex items-center justify-center rounded-xl transition-all",
-                                avatar === e ? "bg-indigo-500/20 text-white scale-110" : "hover:bg-white/5 grayscale hover:grayscale-0"
-                              )}
-                            >
-                              <span className="text-xl">{e}</span>
-                            </button>
-                          ))}
-                        </div>
+                      <div className="absolute top-20 left-0 z-[100] shadow-[0_20px_50px_rgba(0,0,0,0.5)] animate-in fade-in zoom-in duration-200">
+                        <EmojiPicker 
+                          onEmojiClick={(emojiData) => {
+                            setAvatar(emojiData.emoji);
+                            setShowEmojiPicker(false);
+                          }}
+                          theme={Theme.AUTO}
+                        />
                       </div>
                     )}
                   </div>

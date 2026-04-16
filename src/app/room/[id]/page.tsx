@@ -57,6 +57,7 @@ import { cn } from "@/lib/utils";
 import jsPDF from "jspdf";
 import { toPng } from "html-to-image";
 import GifPicker from "./GifPicker";
+import EmojiPicker, { Theme } from "emoji-picker-react";
 
 const EMOJIS = ["🚀", "🔥", "🐱", "🐶", "🦊", "🐼", "🦁", "🦖", "🛸", "🧠", "💎", "🌈", "☀️", "🌙", "⭐", "🦾", "🎨", "🎭", "🎮", "🎸"];
 
@@ -105,6 +106,7 @@ export default function RoomPage() {
   const [displayName, setDisplayName] = useState<string>("");
   const [avatar, setAvatar] = useState<string>(EMOJIS[0]);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const emojiPickerRef = useRef<HTMLDivElement>(null);
   const [showJoinModal, setShowJoinModal] = useState(false);
   
   const [activeTab, setActiveTab] = useState<"planning" | "retro">("planning");
@@ -118,6 +120,18 @@ export default function RoomPage() {
   const [inviteFeedback, setInviteFeedback] = useState(false);
 
   const isAdmin = useMemo(() => user?.uid === room?.creatorId, [user, room]);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (emojiPickerRef.current && !emojiPickerRef.current.contains(event.target as Node)) {
+        setShowEmojiPicker(false);
+      }
+    }
+    if (showEmojiPicker) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [showEmojiPicker]);
 
   // --- Auth & Session ---
   useEffect(() => {
@@ -566,7 +580,7 @@ export default function RoomPage() {
               handleJoin(name);
             }} className="space-y-6">
               <div className="flex items-center gap-3 relative">
-                <div className="relative">
+                <div className="relative" ref={emojiPickerRef}>
                   <button
                     type="button"
                     onClick={() => setShowEmojiPicker(!showEmojiPicker)}
@@ -579,25 +593,14 @@ export default function RoomPage() {
                   </button>
 
                   {showEmojiPicker && (
-                    <div className="absolute bottom-16 left-0 z-50 w-64 bg-[#1a1a1c] p-4 rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] border border-white/10 animate-in fade-in slide-in-from-bottom-2 duration-200">
-                      <div className="grid grid-cols-5 gap-2">
-                        {EMOJIS.map(e => (
-                          <button 
-                            key={e}
-                            type="button"
-                            onClick={() => {
-                              setAvatar(e);
-                              setShowEmojiPicker(false);
-                            }}
-                            className={cn(
-                              "h-10 w-10 flex items-center justify-center rounded-xl transition-all",
-                              avatar === e ? "bg-indigo-500/20 text-white scale-110" : "hover:bg-white/5 grayscale hover:grayscale-0"
-                            )}
-                          >
-                            <span className="text-xl">{e}</span>
-                          </button>
-                        ))}
-                      </div>
+                    <div className="absolute bottom-16 left-0 z-[100] shadow-[0_20px_50px_rgba(0,0,0,0.5)] animate-in fade-in slide-in-from-bottom-2 duration-200">
+                      <EmojiPicker 
+                        onEmojiClick={(emojiData) => {
+                          setAvatar(emojiData.emoji);
+                          setShowEmojiPicker(false);
+                        }}
+                        theme={Theme.AUTO}
+                      />
                     </div>
                   )}
                 </div>
