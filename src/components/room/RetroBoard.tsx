@@ -222,16 +222,16 @@ export function RetroBoard({
   };
 
   return (
-    <div className="flex flex-col gap-4 sm:gap-8 h-full p-4 md:p-8 overflow-hidden">
-        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 bg-white/[0.02] border border-white/5 p-4 md:p-6 rounded-[1.5rem] md:rounded-[2rem]">
+    <div className="flex flex-col gap-3 md:gap-4 lg:gap-8 h-full p-3 md:p-4 lg:p-6 xl:p-8 overflow-hidden">
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3 md:gap-4 bg-white/[0.02] border border-white/5 p-3 md:p-4 lg:p-6 rounded-[1rem] md:rounded-[1.5rem] xl:rounded-[2rem]">
           <div className="flex flex-col gap-1 w-full">
-            <h2 className="text-2xl md:text-3xl font-black flex flex-wrap items-center gap-2 md:gap-4 text-white tracking-tight">
+            <h2 className="text-xl md:text-2xl lg:text-3xl font-black flex flex-wrap items-center gap-2 md:gap-4 text-white tracking-tight">
               Retro Session
-              <span className="text-purple-400 bg-purple-500/10 px-3 py-1 md:px-4 md:py-1 rounded-xl text-xs md:text-sm border border-purple-500/20 shadow-lg shadow-purple-500/10 uppercase tracking-widest font-black">
+              <span className="text-purple-400 bg-purple-500/10 px-3 py-1 md:px-4 md:py-1 rounded-xl text-[10px] md:text-xs lg:text-sm border border-purple-500/20 shadow-lg shadow-purple-500/10 uppercase tracking-widest font-black">
                 {cards.length} INSIGHTS
               </span>
             </h2>
-            <p className="text-zinc-500 text-xs uppercase tracking-[0.3em] font-black font-mono mt-1">Archive sprint learnings with team priorities</p>
+            <p className="text-zinc-500 text-[10px] lg:text-xs uppercase tracking-[0.3em] font-black font-mono mt-1">Archive sprint learnings with team priorities</p>
           </div>
           
           <div className="flex w-full md:w-auto items-center justify-end gap-2 sm:gap-3">
@@ -267,17 +267,17 @@ export function RetroBoard({
 
       <div 
         ref={boardRef}
-        className="flex-1 flex flex-col lg:flex-row gap-6 md:gap-12 overflow-y-auto lg:overflow-x-auto overflow-x-hidden p-2 sm:p-4 md:p-12 pb-24 md:pb-24 custom-scrollbar"
+        className="flex-1 flex flex-col lg:flex-row gap-4 lg:gap-6 xl:gap-12 overflow-y-auto lg:overflow-x-auto overflow-x-hidden p-2 sm:p-4 md:p-6 xl:p-12 pb-24 md:pb-24 custom-scrollbar"
       >
         {columns.map((col) => (
           <div 
             key={col.id} 
-            className="flex flex-col w-full lg:min-w-[500px] lg:w-[500px] shrink-0 group/col"
+            className="flex flex-col w-full lg:min-w-[320px] xl:min-w-[400px] 2xl:min-w-[500px] lg:w-[320px] xl:w-[400px] 2xl:w-[500px] shrink-0 group/col"
           >
-             <div className="flex items-center justify-between mb-6 px-4">
-                <div className="flex items-center gap-3">
-                  <h4 className="text-xl font-bold text-indigo-100">{col.title}</h4>
-                  <span className="bg-white/5 text-zinc-500 text-xs px-2 py-0.5 rounded-full border border-white/5 font-mono">
+             <div className="flex items-center justify-between mb-4 lg:mb-6 px-2 lg:px-4">
+                <div className="flex items-center gap-2 lg:gap-3">
+                  <h4 className="text-base sm:text-lg lg:text-xl font-bold text-indigo-100">{col.title}</h4>
+                  <span className="bg-white/5 text-zinc-500 text-[9px] sm:text-[10px] lg:text-xs px-2 py-0.5 rounded-full border border-white/5 font-mono">
                     {cards.filter((c) => c.columnId === col.id).length}
                   </span>
                 </div>
@@ -289,7 +289,7 @@ export function RetroBoard({
                 )}
              </div>
 
-             <div className="flex flex-col gap-8 custom-scrollbar">
+             <div className="flex flex-col gap-4 lg:gap-8 custom-scrollbar pb-6">
                 {cards.filter((c) => c.columnId === col.id).map((card) => (
                   <RetroCard
                     key={card.id}
@@ -312,12 +312,12 @@ export function RetroBoard({
                 ))}
                 
                 {activeColumnId === col.id ? (
-                  <div className="flex flex-col gap-4 rounded-3xl bg-white/[0.02] border border-white/10 p-6 shadow-2xl relative overflow-hidden transition-all duration-300">
+                  <div className="flex flex-col gap-3 lg:gap-4 rounded-2xl lg:rounded-3xl bg-white/[0.02] border border-white/10 p-4 lg:p-6 shadow-2xl relative overflow-hidden transition-all duration-300">
                     <div className="absolute top-0 left-0 w-1 h-full bg-indigo-500/50"></div>
                     <textarea 
                       autoFocus
                       placeholder="Type your thought..."
-                      className="w-full bg-transparent border-none text-white text-base focus:outline-none resize-none min-h-[100px] custom-scrollbar placeholder-zinc-700"
+                      className="w-full bg-transparent border-none text-white text-sm md:text-base focus:outline-none resize-none min-h-[100px] custom-scrollbar placeholder-zinc-700"
                       value={newCardText}
                       onChange={(e) => setNewCardText(e.target.value)}
                       onKeyDown={(e) => {
@@ -387,13 +387,13 @@ export function RetroBoard({
                             setNewCardImage("");
                             setActiveGifSearch(null);
                           }}
-                          className="px-4 py-2 text-sm font-bold text-zinc-500 hover:text-white transition-all"
+                          className="px-3 md:px-4 py-2 text-xs md:text-sm font-bold text-zinc-500 hover:text-white transition-all"
                         >
                           Cancel
                         </button>
                         <button 
                           onClick={() => addCard(col.id)} 
-                          className="bg-indigo-600 text-white px-6 py-2.5 rounded-xl text-sm font-black hover:bg-indigo-500 transition-all hover:scale-105 active:scale-95 shadow-lg shadow-indigo-500/20"
+                          className="bg-indigo-600 text-white px-4 md:px-6 py-2 md:py-2.5 rounded-xl text-xs md:text-sm font-black hover:bg-indigo-500 transition-all hover:scale-105 active:scale-95 shadow-lg shadow-indigo-500/20"
                         >
                           Post Insight
                         </button>
@@ -406,10 +406,10 @@ export function RetroBoard({
                       setActiveColumnId(col.id);
                       setNewCardText("");
                     }}
-                    className="flex h-16 items-center justify-center gap-3 rounded-2xl border-2 border-dashed border-white/10 bg-white/[0.02] text-zinc-400 hover:border-indigo-500/50 hover:bg-indigo-500/5 hover:text-indigo-400 transition-all group active:scale-95"
+                    className="flex h-12 lg:h-16 items-center justify-center gap-2 lg:gap-3 rounded-xl lg:rounded-2xl border-2 border-dashed border-white/10 bg-white/[0.02] text-zinc-400 hover:border-indigo-500/50 hover:bg-indigo-500/5 hover:text-indigo-400 transition-all group active:scale-95"
                   >
-                    <Plus className="h-5 w-5 transition-transform group-hover:scale-125" />
-                    <span className="font-bold text-sm uppercase tracking-widest">Add a card</span>
+                    <Plus className="h-4 w-4 lg:h-5 lg:w-5 transition-transform group-hover:scale-125" />
+                    <span className="font-bold text-xs lg:text-sm uppercase tracking-widest">Add a card</span>
                   </button>
                 )}
              </div>

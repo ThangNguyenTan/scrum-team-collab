@@ -76,7 +76,7 @@ export function PlanningBoard({ room, roomId, users, isAdmin, currentUserId }: P
       onClick={() => handleVote(card)}
       disabled={room.revealed}
       className={cn(
-        "flex flex-col items-center justify-center h-24 w-16 sm:h-32 sm:w-24 md:h-40 md:w-28 rounded-2xl md:rounded-3xl border-3 transition-all group relative",
+        "flex flex-col items-center justify-center h-20 w-14 sm:h-24 sm:w-16 md:h-28 md:w-20 lg:h-32 lg:w-24 xl:h-40 xl:w-28 rounded-2xl lg:rounded-3xl border-3 transition-all group relative",
         myVote === card 
           ? "bg-indigo-500 border-indigo-400 scale-110 shadow-[0_20px_60px_rgba(99,102,241,0.4)] z-20" 
           : "bg-black/60 border-white/10",
@@ -91,14 +91,14 @@ export function PlanningBoard({ room, roomId, users, isAdmin, currentUserId }: P
         </div>
       )}
       <span className={cn(
-        "text-2xl sm:text-3xl md:text-4xl font-black transition-transform group-hover:scale-125 duration-500",
-        card === "☕" ? "text-xl sm:text-2xl md:text-3xl" : "",
+        "text-xl sm:text-2xl md:text-3xl xl:text-4xl font-black transition-transform group-hover:scale-125 duration-500",
+        card === "☕" ? "text-lg sm:text-xl md:text-2xl xl:text-3xl" : "",
         "text-white"
       )}>
         {card}
       </span>
       <span className={cn(
-        "text-[8px] sm:text-[10px] md:text-xs uppercase font-black tracking-widest opacity-30 mt-1 sm:mt-3",
+        "text-[8px] md:text-[9px] xl:text-[10px] uppercase font-black tracking-widest opacity-30 mt-1 sm:mt-2",
         myVote === card ? "text-white opacity-80" : "text-white/40"
       )}>
         Points
@@ -107,32 +107,32 @@ export function PlanningBoard({ room, roomId, users, isAdmin, currentUserId }: P
   );
 
   return (
-    <div className="flex flex-col h-full gap-4 md:gap-6 p-4 md:p-8 overflow-y-auto lg:overflow-hidden overflow-x-hidden pb-12 lg:pb-8">
+    <div className="flex flex-col h-full gap-3 md:gap-4 xl:gap-6 p-3 md:p-4 lg:p-6 xl:p-8 overflow-y-auto overflow-x-hidden pb-12 lg:pb-8">
       {/* 1. Header Controls for Planning */}
-      <div className="shrink-0 flex flex-col xl:flex-row lg:items-center justify-between gap-4 bg-white/[0.03] border border-white/5 p-4 md:p-6 rounded-[1.5rem] md:rounded-[2rem] shadow-xl">
+      <div className="shrink-0 flex flex-col xl:flex-row lg:items-center justify-between gap-4 bg-white/[0.03] border border-white/5 p-3 md:p-4 xl:p-6 rounded-2xl xl:rounded-[2rem] shadow-xl">
         <div className="flex flex-col gap-2 md:gap-1 overflow-x-auto w-full custom-scrollbar pb-2 xl:pb-0">
-          <h2 className="text-xl md:text-3xl font-black flex items-center gap-2 md:gap-4 text-white tracking-tight shrink-0 whitespace-nowrap">
+          <h2 className="text-lg md:text-xl xl:text-3xl font-black flex items-center gap-2 md:gap-4 text-white tracking-tight shrink-0 whitespace-nowrap">
             Sprint Planning
             {stats !== null && (
               <div className="flex gap-2 -sm md:gap-3 items-center ml-2">
-                <span className="flex items-center gap-1 md:gap-2 text-indigo-400 bg-indigo-500/10 px-2 md:px-4 py-1 md:py-1.5 rounded-lg md:rounded-xl text-sm md:text-lg border border-indigo-500/20 shadow-lg shadow-indigo-500/10">
+                <span className="flex items-center gap-1 xl:gap-2 text-indigo-400 bg-indigo-500/10 px-2 lg:px-3 xl:px-4 py-1 xl:py-1.5 rounded-lg xl:rounded-xl text-xs md:text-sm xl:text-lg border border-indigo-500/20 shadow-lg shadow-indigo-500/10">
                   Avg: <span className="font-bold text-white">{stats.avg}</span>
                 </span>
-                <span className="flex items-center gap-1 md:gap-2 text-sky-400 bg-sky-500/10 px-2 md:px-4 py-1 md:py-1.5 rounded-lg md:rounded-xl text-sm md:text-lg border border-sky-500/20 shadow-lg shadow-sky-500/10">
+                <span className="flex items-center gap-1 xl:gap-2 text-sky-400 bg-sky-500/10 px-2 lg:px-3 xl:px-4 py-1 xl:py-1.5 rounded-lg xl:rounded-xl text-xs md:text-sm xl:text-lg border border-sky-500/20 shadow-lg shadow-sky-500/10">
                   Min: <span className="font-bold text-white">{stats.min}</span>
                 </span>
-                <span className="flex items-center gap-1 md:gap-2 text-rose-400 bg-rose-500/10 px-2 md:px-4 py-1 md:py-1.5 rounded-lg md:rounded-xl text-sm md:text-lg border border-rose-500/20 shadow-lg shadow-rose-500/10">
+                <span className="flex items-center gap-1 xl:gap-2 text-rose-400 bg-rose-500/10 px-2 lg:px-3 xl:px-4 py-1 xl:py-1.5 rounded-lg xl:rounded-xl text-xs md:text-sm xl:text-lg border border-rose-500/20 shadow-lg shadow-rose-500/10">
                   Max: <span className="font-bold text-white">{stats.max}</span>
                 </span>
                 
-                <div className="h-6 w-px bg-white/10 mx-1"></div>
+                <div className="h-4 xl:h-6 w-px bg-white/10 mx-1"></div>
                 
                 {/* Proposed Final Estimate */}
-                  <span className="flex items-center gap-2 text-emerald-400 bg-emerald-500/10 px-5 py-1.5 rounded-xl text-lg border border-emerald-500/30 shadow-[0_0_30px_rgba(52,211,153,0.15)] relative overflow-hidden group">
+                  <span className="flex items-center gap-2 text-emerald-400 bg-emerald-500/10 px-3 xl:px-5 py-1 xl:py-1.5 rounded-lg xl:rounded-xl text-sm xl:text-lg border border-emerald-500/30 shadow-[0_0_30px_rgba(52,211,153,0.15)] relative overflow-hidden group">
                     <div className="absolute inset-x-0 top-0 h-[1px] bg-emerald-400/50"></div>
                     <Sparkles className="h-3.5 w-3.5 relative z-10 animate-pulse" />
-                    <span className="relative z-10 tracking-[0.2em] uppercase text-[9px] font-black pt-1">PROPOSED:</span>
-                    <span className="relative z-10 font-black text-white text-2xl tabular-nums">{stats.proposal}</span>
+                    <span className="relative z-10 tracking-[0.2em] uppercase text-[8px] xl:text-[9px] font-black pt-1 hidden md:inline-block">PROPOSED:</span>
+                    <span className="relative z-10 font-black text-white text-lg xl:text-2xl tabular-nums">{stats.proposal}</span>
                   </span>
                 </div>
               )}
@@ -179,33 +179,33 @@ export function PlanningBoard({ room, roomId, users, isAdmin, currentUserId }: P
         )}
       </div>
 
-      <div className="flex-shrink-0 lg:flex-shrink lg:flex-grow min-h-[300px] lg:min-h-0 bg-black/20 rounded-[2rem] md:rounded-[3rem] p-1 md:p-2 border border-white/[0.02] flex flex-col">
-          <div className="flex-1 overflow-y-auto lg:overflow-y-auto custom-scrollbar p-2 sm:p-4 md:p-6">
-            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-3 sm:gap-4 md:gap-6">
+      <div className="flex-grow flex-shrink-0 min-h-[350px] bg-black/20 rounded-2xl xl:rounded-[3rem] p-1 xl:p-2 border border-white/[0.02] flex flex-col">
+          <div className="flex-1 overflow-y-auto custom-scrollbar p-2 sm:p-4 xl:p-6">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 2xl:grid-cols-6 gap-2 sm:gap-3 xl:gap-6">
               {users.map((u) => (
                 <div 
                   key={u.id}
                   className={cn(
-                    "flex flex-col items-center justify-center p-2 sm:p-6 md:p-8 rounded-[1.5rem] md:rounded-[2.5rem] border transition-all duration-700",
+                    "flex flex-col items-center justify-center p-2 sm:p-4 xl:p-8 rounded-xl xl:rounded-[2.5rem] border transition-all duration-700",
                     room.revealed && u.vote 
                       ? "bg-indigo-500/5 border-indigo-500/40 shadow-[0_0_40px_rgba(99,102,241,0.1)] scale-105" 
                       : "bg-white/[0.02] border-white/5"
                   )}
                 >
                   <div className={cn(
-                    "h-24 w-16 sm:h-28 sm:w-20 md:h-36 md:w-28 rounded-xl md:rounded-2xl flex items-center justify-center transition-all duration-1000 perspective-1000 group/card cursor-pointer mb-4 md:mb-8",
+                    "h-20 w-14 sm:h-24 sm:w-16 md:h-28 md:w-20 lg:h-32 lg:w-24 xl:h-36 xl:w-28 rounded-lg md:rounded-2xl flex items-center justify-center transition-all duration-1000 perspective-1000 group/card cursor-pointer mb-2 xl:mb-8",
                     room.revealed ? "rotate-0 scale-110" : u.vote ? "rotate-y-180" : "opacity-10 scale-90"
                   )}>
                       {room.revealed ? (
-                        <div className="h-full w-full rounded-2xl bg-white text-black flex flex-col items-center justify-center shadow-[0_25px_50px_rgba(0,0,0,0.5)] relative overflow-hidden ring-1 ring-white/20">
+                        <div className="h-full w-full rounded-lg md:rounded-2xl bg-white text-black flex flex-col items-center justify-center shadow-[0_25px_50px_rgba(0,0,0,0.5)] relative overflow-hidden ring-1 ring-white/20">
                           <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/10 to-transparent"></div>
-                          <div className="absolute top-1 left-1 md:top-3 md:left-3 text-[8px] md:text-[10px] opacity-30 font-black tracking-tighter uppercase">ESTM</div>
-                          <div className="absolute bottom-1 right-1 md:bottom-3 md:right-3 text-[8px] md:text-[10px] opacity-30 font-black tracking-tighter self-end rotate-180 uppercase">ESTM</div>
-                          <span className="text-4xl md:text-7xl font-black tracking-tighter mt-1">{u.vote === "☕" ? <Coffee className="h-8 w-8 md:h-12 md:w-12" /> : (u.vote || "-")}</span>
+                          <div className="absolute top-1 left-1 lg:top-3 lg:left-3 text-[6px] md:text-[8px] opacity-30 font-black tracking-tighter uppercase">ESTM</div>
+                          <div className="absolute bottom-1 right-1 lg:bottom-3 lg:right-3 text-[6px] md:text-[8px] opacity-30 font-black tracking-tighter self-end rotate-180 uppercase">ESTM</div>
+                          <span className="text-3xl md:text-5xl xl:text-7xl font-black tracking-tighter mt-1">{u.vote === "☕" ? <Coffee className="h-6 w-6 lg:h-12 lg:w-12" /> : (u.vote || "-")}</span>
                         </div>
                       ) : (
                         <div className={cn(
-                          "h-full w-full rounded-2xl flex items-center justify-center shadow-2xl border-2 border-white/5 relative overflow-hidden",
+                          "h-full w-full rounded-lg md:rounded-2xl flex items-center justify-center shadow-2xl border-2 border-white/5 relative overflow-hidden",
                           u.vote 
                             ? "bg-gradient-to-br from-indigo-500 via-indigo-600 to-indigo-700 ring-2 ring-indigo-400/20" 
                             : "bg-white/5 border-dashed"
@@ -224,10 +224,10 @@ export function PlanningBoard({ room, roomId, users, isAdmin, currentUserId }: P
                   </div>
 
                   <div className="flex flex-col items-center w-full">
-                    <div className="mb-3 h-10 w-10 rounded-full bg-zinc-800 flex items-center justify-center text-sm font-black text-zinc-400 border border-white/5 shadow-inner">
-                      {u.avatar ? <span className="text-xl">{u.avatar}</span> : u.name.charAt(0).toUpperCase()}
+                    <div className="mb-2 h-6 w-6 md:h-8 md:w-8 lg:h-10 lg:w-10 rounded-full bg-zinc-800 flex items-center justify-center text-xs lg:text-sm font-black text-zinc-400 border border-white/5 shadow-inner">
+                      {u.avatar ? <span className="text-base lg:text-xl">{u.avatar}</span> : u.name.charAt(0).toUpperCase()}
                     </div>
-                    <span className="text-[10px] font-black text-zinc-500 truncate w-full text-center uppercase tracking-[0.2em]">{u.name}</span>
+                    <span className="text-[8px] md:text-[10px] font-black text-zinc-500 truncate w-full text-center uppercase tracking-[0.2em]">{u.name}</span>
                   </div>
                 </div>
               ))}
@@ -235,7 +235,7 @@ export function PlanningBoard({ room, roomId, users, isAdmin, currentUserId }: P
           </div>
       </div>
 
-      <div className="shrink-0 flex flex-col items-center justify-center p-4 md:p-8 rounded-[2rem] md:rounded-[3rem] bg-indigo-500/[0.02] border border-indigo-500/10 relative overflow-hidden backdrop-blur-3xl mt-auto z-10">
+      <div className="shrink-0 flex flex-col items-center justify-center p-3 md:p-4 xl:p-8 rounded-2xl xl:rounded-[3rem] bg-indigo-500/[0.02] border border-indigo-500/10 relative overflow-hidden backdrop-blur-3xl mt-auto z-10">
          <div className="absolute inset-0 bg-gradient-to-t from-indigo-500/5 to-transparent"></div>
          
          <div 

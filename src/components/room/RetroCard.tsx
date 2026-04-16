@@ -43,7 +43,7 @@ export function RetroCard({
 
   return (
     <div 
-      className="group relative flex flex-col gap-4 rounded-3xl bg-white/[0.03] border border-white/5 p-6 hover:bg-white/[0.05] hover:border-indigo-500/30 transition-all hover:translate-y-[-4px] shadow-[0_20px_40px_rgba(0,0,0,0.3)] perspective-1000"
+      className="group relative flex flex-col gap-3 lg:gap-4 rounded-2xl lg:rounded-3xl bg-white/[0.03] border border-white/5 p-4 lg:p-5 xl:p-6 hover:bg-white/[0.05] hover:border-indigo-500/30 transition-all hover:translate-y-[-4px] shadow-[0_20px_40px_rgba(0,0,0,0.3)] perspective-1000"
     >
       {isEditing ? (
         <div className="flex flex-col gap-3">
@@ -68,7 +68,7 @@ export function RetroCard({
 
           <textarea 
             autoFocus
-            className="w-full bg-transparent border-none text-white text-base focus:outline-none resize-none min-h-[80px] custom-scrollbar"
+            className="w-full bg-transparent border-none text-white text-sm md:text-base focus:outline-none resize-none min-h-[80px] custom-scrollbar"
             value={editingText}
             onChange={(e) => setEditingText(e.target.value)}
           />
@@ -124,14 +124,14 @@ export function RetroCard({
               />
             </div>
           )}
-          {card.text && <p className="text-[15px] text-zinc-200 leading-relaxed font-medium tracking-tight whitespace-pre-wrap">{card.text}</p>}
+          {card.text && <p className="text-xs sm:text-sm lg:text-[15px] xl:text-base text-zinc-200 leading-relaxed font-medium tracking-tight whitespace-pre-wrap">{card.text}</p>}
           
           <div className="flex items-center justify-between mt-2 pt-4 border-t border-white/[0.03]">
-            <div className="flex items-center gap-3">
-              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-indigo-500/10 text-[10px] font-black text-indigo-400 border border-indigo-500/20 shadow-inner">
-                {card.authorAvatar ? <span className="text-sm">{card.authorAvatar}</span> : (card.authorName || "S").charAt(0).toUpperCase()}
+            <div className="flex items-center gap-2 md:gap-3">
+              <div className="flex h-6 w-6 md:h-7 md:w-7 items-center justify-center rounded-lg bg-indigo-500/10 text-[9px] md:text-[10px] font-black text-indigo-400 border border-indigo-500/20 shadow-inner">
+                {card.authorAvatar ? <span className="text-xs md:text-sm">{card.authorAvatar}</span> : (card.authorName || "S").charAt(0).toUpperCase()}
               </div>
-              <span className="text-[9px] font-black text-zinc-500 uppercase tracking-[0.2em]">
+              <span className="text-[8px] sm:text-[9px] lg:text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em]">
                 {card.authorName || "Squad Member"}
               </span>
             </div>
@@ -151,7 +151,7 @@ export function RetroCard({
                 disabled={card.authorId === currentUserId || (card.authorName === displayName && displayName !== "")}
                 onClick={() => onToggleUpvote(card)}
                 className={cn(
-                  "flex items-center gap-2 px-3 py-1.5 rounded-xl text-[10px] font-black transition-all uppercase tracking-widest",
+                  "flex items-center gap-1 md:gap-2 px-2 md:px-3 py-1 md:py-1.5 rounded-lg md:rounded-xl text-[9px] md:text-[10px] lg:text-xs font-black transition-all uppercase tracking-widest",
                   (card.authorId === currentUserId || (card.authorName === displayName && displayName !== "")) 
                     ? "opacity-30 cursor-not-allowed" 
                     : "cursor-pointer active:scale-90",
