@@ -49,6 +49,7 @@ import {
   UploadCloud,
   Search,
   Pencil,
+  Edit2,
   Save,
   Crown
 } from "lucide-react";
@@ -56,6 +57,8 @@ import { cn } from "@/lib/utils";
 import jsPDF from "jspdf";
 import { toPng } from "html-to-image";
 import GifPicker from "./GifPicker";
+
+const EMOJIS = ["🚀", "🔥", "🐱", "🐶", "🦊", "🐼", "🦁", "🦖", "🛸", "🧠", "💎", "🌈", "☀️", "🌙", "⭐", "🦾", "🎨", "🎭", "🎮", "🎸"];
 
 // --- Types ---
 interface RoomData {
@@ -69,6 +72,7 @@ interface RoomData {
 interface RoomUser {
   id: string;
   name: string;
+  avatar?: string;
   vote: string | null;
   lastSeen: any;
   joinedAt: any;
@@ -88,6 +92,7 @@ interface RetroCard {
   upvotes: string[];
   authorName: string;
   authorId: string;
+  authorAvatar?: string;
   createdAt: any;
 }
 
@@ -98,6 +103,8 @@ export default function RoomPage() {
   
   const [user, setUser] = useState<User | null>(null);
   const [displayName, setDisplayName] = useState<string>("");
+  const [avatar, setAvatar] = useState<string>(EMOJIS[0]);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [showJoinModal, setShowJoinModal] = useState(false);
   
   const [activeTab, setActiveTab] = useState<"planning" | "retro">("planning");
@@ -118,8 +125,16 @@ export default function RoomPage() {
       setUser(u);
       
       // Check local storage for preference
-      const savedName = localStorage.getItem(`scrum_name_${roomId}`);
+      const globalName = localStorage.getItem("scrum_user_name");
+      const roomSpecificName = localStorage.getItem(`scrum_name_${roomId}`);
+      const savedName = roomSpecificName || globalName;
+      
+      const globalAvatar = localStorage.getItem("scrum_user_avatar");
+      const roomSpecificAvatar = localStorage.getItem(`scrum_avatar_${roomId}`);
+      const savedAvatar = roomSpecificAvatar || globalAvatar;
+
       if (savedName && !displayName) setDisplayName(savedName);
+      if (savedAvatar && !avatar) setAvatar(savedAvatar);
 
       if (!u) {
         if (savedName) {
@@ -135,10 +150,24 @@ export default function RoomPage() {
         } else {
           // Returning guest or Google user
           const finalName = u.displayName || savedName || "Guest";
-          if (finalName && !displayName) setDisplayName(finalName);
+          if (finalName && !displayName) {
+             setDisplayName(finalName);
+             // Sync room specific name if missing
+             if (!roomSpecificName && globalName) {
+                localStorage.setItem(`scrum_name_${roomId}`, globalName);
+             }
+          }
+          
+          if (savedAvatar && !avatar) {
+            setAvatar(savedAvatar);
+            if (!roomSpecificAvatar && globalAvatar) {
+              localStorage.setItem(`scrum_avatar_${roomId}`, globalAvatar);
+            }
+          }
 
           await setDoc(doc(db, "rooms", roomId, "users", u.uid), {
             name: finalName,
+            avatar: savedAvatar || EMOJIS[0],
             lastSeen: serverTimestamp(),
             joinedAt: serverTimestamp(),
           }, { merge: true });
@@ -264,6 +293,9 @@ export default function RoomPage() {
     
     setDisplayName(name);
     localStorage.setItem(`scrum_name_${roomId}`, name);
+    localStorage.setItem("scrum_user_name", name);
+    localStorage.setItem(`scrum_avatar_${roomId}`, avatar);
+    localStorage.setItem("scrum_user_avatar", avatar);
     setShowJoinModal(false);
 
     // Register user in the room session
@@ -277,6 +309,7 @@ export default function RoomPage() {
 
     await setDoc(doc(db, "rooms", roomId, "users", uid), {
       name,
+      avatar,
       vote: null,
       joinedAt: serverTimestamp(),
     });
@@ -324,7 +357,7 @@ export default function RoomPage() {
     try {
       const roomRef = await addDoc(collection(db, "rooms"), {
         creatorId: user.uid,
-        creatorName: user.displayName,
+        creatorName: displayName || "Anonymous",
         status: "planning",
         revealed: false,
         createdAt: serverTimestamp(),
@@ -349,29 +382,28 @@ export default function RoomPage() {
       <div className="fixed inset-0 -z-10 bg-[radial-gradient(circle_at_50%_0%,rgba(67,56,202,0.08),transparent_50%)] pointer-events-none"></div>
       
       {/* Room Header */}
-      <header className="h-16 flex items-center justify-between px-6 border-b border-white/5 bg-black/40 backdrop-blur-md shrink-0">
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2 cursor-pointer" onClick={() => router.push("/")}>
-            <Zap className="h-5 w-5 text-indigo-500" />
-            <span className="font-bold tracking-tight">ScrumCollab</span>
+      <header className="h-16 flex items-center justify-between px-6 border-b border-white/5 bg-black/60 backdrop-blur-xl shrink-0 z-50">
+        <div className="flex items-center gap-6">
+          <div className="flex items-center gap-3 cursor-pointer group" onClick={() => router.push("/")}>
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-500 shadow-[0_0_15px_rgba(99,102,241,0.2)] transition-transform group-hover:scale-110">
+               <Zap className="h-4 w-4 text-white" />
+            </div>
+            <span className="font-black tracking-tighter text-lg">SCRUM_COLLAB</span>
           </div>
-          <div className="h-4 w-[1px] bg-white/10 hidden sm:block"></div>
-          <div className="hidden sm:flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 group">
-            <span className="text-base font-medium text-zinc-400 group-hover:text-white transition-colors">{roomId}</span>
-            <button onClick={() => copyToClipboard(roomId, setIdCopyFeedback)} className="text-zinc-500 hover:text-indigo-400 transition-colors">
-              {idCopyFeedback ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
-            </button>
+          
+          <div className="h-6 w-[1px] bg-white/10 hidden md:block"></div>
+          
+          <div className="hidden md:flex items-center gap-2 group">
+            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500">Session ID:</span>
+            <div className="flex items-center gap-2 px-3 py-1 rounded-lg bg-white/5 border border-white/5 transition-colors group-hover:border-white/10">
+              <span className="text-xs font-mono text-zinc-400 group-hover:text-indigo-400 transition-colors uppercase">{roomId}</span>
+              <button onClick={() => copyToClipboard(roomId, setIdCopyFeedback)} className="text-zinc-600 hover:text-white transition-colors">
+                {idCopyFeedback ? <CheckCircle2 className="h-3 w-3 text-emerald-500" /> : <Copy className="h-3 w-3" />}
+              </button>
+            </div>
           </div>
-          {user && !user.isAnonymous && (
-            <button 
-              onClick={createNewRoom}
-              className="hidden lg:flex items-center gap-2 text-xs font-black uppercase tracking-widest text-indigo-400 hover:text-indigo-300 transition-colors bg-indigo-500/10 px-3 py-1.5 rounded-lg border border-indigo-500/20"
-            >
-              <Plus className="h-3 w-3" />
-              New Room
-            </button>
-          )}
-        </div>
+          
+          </div>
 
         <div className="flex items-center gap-3">
           <div className="flex p-1 rounded-xl bg-white/5 border border-white/10 mr-4">
@@ -426,40 +458,75 @@ export default function RoomPage() {
 
       {/* Main Content Area */}
       <div className="flex flex-1 overflow-hidden">
-        {/* User Sidebar */}
-        <aside className="w-80 border-r border-white/5 bg-black/40 flex flex-col hidden lg:flex shrink-0">
-          <div className="p-4 border-b border-white/5 flex items-center gap-2 text-zinc-400 shrink-0">
-            <Users className="h-4 w-4" />
-            <span className="text-xs font-bold uppercase tracking-widest">Connected Team</span>
+        {/* User Sidebar (Desktop) */}
+        <aside className="w-80 border-r border-white/5 bg-[#050505]/40 flex flex-col hidden lg:flex shrink-0">
+          <div className="p-6 border-b border-white/5 flex items-center justify-between shrink-0 bg-white/[0.01]">
+            <div className="flex items-center gap-2">
+              <Users className="h-3.5 w-3.5 text-zinc-500" />
+              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500">Live Squad</span>
+            </div>
+            <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_10px_rgba(16,185,129,0.5)]"></div>
           </div>
-          <div className="flex-1 overflow-y-auto p-4 space-y-2 custom-scrollbar">
+          <div className="flex-1 overflow-y-auto p-4 space-y-1.5 custom-scrollbar">
             {sortedUsers.map(u => (
-              <div key={u.id} className="flex items-center justify-between group/u p-2 rounded-xl hover:bg-white/[0.02] border border-transparent hover:border-white/5 transition-all">
-                <div className="flex items-center gap-2">
+              <div key={u.id} className="flex items-center justify-between group/u p-3 rounded-2xl hover:bg-white/[0.03] border border-transparent hover:border-white/5 transition-all duration-300">
+                <div className="flex items-center gap-3">
                   <div className={cn(
-                    "h-7 w-7 rounded-full border flex items-center justify-center font-bold text-xs",
+                    "h-9 w-9 rounded-xl border flex items-center justify-center font-black text-xs relative overflow-hidden transition-transform group-hover/u:scale-105",
                     u.id === room?.creatorId 
                       ? "bg-amber-500/10 border-amber-500/30 text-amber-500" 
                       : "bg-indigo-500/10 border-indigo-500/20 text-indigo-400"
                   )}>
-                    {u.id === room?.creatorId ? <Crown className="h-3 w-3" /> : u.name.charAt(0)}
-                  </div>
-                  <div className="flex flex-col min-w-0">
-                    <span className={cn("text-sm font-medium truncate", u.id === user?.uid ? "text-white" : "text-zinc-500")}>
-                      {u.name} {u.id === user?.uid && "(You)"}
-                    </span>
-                    {u.id === room?.creatorId && (
-                      <span className="text-[8px] font-black uppercase tracking-widest text-amber-500/70">Host</span>
+                    <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent opacity-0 group-hover/u:opacity-100 transition-opacity"></div>
+                    {u.id === room?.creatorId ? <Crown className="h-4 w-4" /> : (
+                      u.avatar ? <span className="text-xl">{u.avatar}</span> : u.name.charAt(0).toUpperCase()
                     )}
                   </div>
+                  <div className="flex flex-col min-w-0">
+                    <span className={cn("text-sm font-bold truncate tracking-tight transition-colors", u.id === user?.uid ? "text-white" : "text-zinc-400 group-hover/u:text-zinc-200")}>
+                      {u.name} {u.id === user?.uid && "(YOU)"}
+                    </span>
+                    <div className="flex items-center gap-2">
+                       <span className="text-[9px] font-mono text-zinc-600">ID:{u.id.slice(0, 4)}</span>
+                       {u.id === room?.creatorId && (
+                         <span className="text-[8px] font-black uppercase tracking-widest text-amber-500 opacity-60">Host</span>
+                       )}
+                    </div>
+                  </div>
                 </div>
-                {u.vote && room?.status === "planning" && (
-                   <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
+                {u.vote && room?.status === "planning" ? (
+                   <div className="h-6 w-6 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
+                      <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
+                   </div>
+                ) : (
+                  <div className="h-1.2 w-1.2 rounded-full bg-white/5 group-hover/u:bg-white/20 transition-colors"></div>
                 )}
               </div>
             ))}
           </div>
         </aside>
+
+        {/* Mobile Squad Bar (Bottom) */}
+        <div className="lg:hidden fixed bottom-6 left-6 right-6 z-50 pointer-events-none">
+          <div className="glass h-12 rounded-full pointer-events-auto flex items-center justify-between px-6 shadow-2xl border border-white/10">
+            <div className="flex -space-x-2">
+               {sortedUsers.slice(0, 4).map(u => (
+                 <div key={u.id} className="h-7 w-7 rounded-full border border-[#0a0a0b] bg-indigo-500/20 flex items-center justify-center text-[10px] font-black ring-2 ring-[#0a0a0b]">
+                   {u.avatar || u.name.charAt(0).toUpperCase()}
+                 </div>
+               ))}
+               {sortedUsers.length > 4 && (
+                 <div className="h-7 w-7 rounded-full border border-[#0a0a0b] bg-zinc-800 flex items-center justify-center text-[8px] font-black ring-2 ring-[#0a0a0b]">
+                   +{sortedUsers.length - 4}
+                 </div>
+               )}
+            </div>
+            <div className="flex items-center gap-2">
+               <span className="text-[8px] font-black uppercase tracking-widest text-zinc-500">Live Squad</span>
+               <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse"></div>
+            </div>
+          </div>
+        </div>
 
         {/* Main Board */}
         <main className="flex-1 bg-black/40 overflow-hidden relative">
@@ -481,6 +548,7 @@ export default function RoomPage() {
               isAdmin={isAdmin}
               currentUserId={user?.uid || ""}
               displayName={displayName}
+              avatar={avatar}
             />
           )}
         </main>
@@ -490,27 +558,66 @@ export default function RoomPage() {
       {showJoinModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-6">
           <div className="w-full max-w-sm rounded-[2rem] border border-white/10 bg-[#161618] p-8 shadow-2xl">
-            <h2 className="text-3xl font-bold text-white mb-2">Joining Scrum Room</h2>
-            <p className="text-zinc-400 text-base mb-6">Enter a display name to get started. No account needed.</p>
+            <h2 className="text-2xl font-bold text-white mb-2">Joining Scrum Room</h2>
+            <p className="text-zinc-400 text-sm mb-6">Enter a display name to get started. No account needed.</p>
             <form onSubmit={(e) => {
               e.preventDefault();
               const name = (e.currentTarget.elements.namedItem("name") as HTMLInputElement).value;
               handleJoin(name);
-            }} className="space-y-4">
-              <input 
-                name="name" 
-                type="text" 
-                required 
-                autoFocus 
-                placeholder="Ex: Sapphire Dev"
-                className="w-full h-12 rounded-xl bg-white/5 border border-white/10 px-4 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all"
-              />
-              <button 
-                type="submit" 
-                className="w-full h-12 rounded-xl bg-white text-black font-bold text-xl hover:bg-zinc-200 transition-all active:scale-[0.98]"
-              >
-                Join Now
-              </button>
+            }} className="space-y-6">
+              <div className="flex items-center gap-3 relative">
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                    className={cn(
+                      "h-14 w-14 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-2xl transition-all hover:bg-white/10 active:scale-95",
+                      showEmojiPicker && "ring-2 ring-indigo-500/50 border-indigo-500/30"
+                    )}
+                  >
+                    {avatar}
+                  </button>
+
+                  {showEmojiPicker && (
+                    <div className="absolute bottom-16 left-0 z-50 w-64 bg-[#1a1a1c] p-4 rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] border border-white/10 animate-in fade-in slide-in-from-bottom-2 duration-200">
+                      <div className="grid grid-cols-5 gap-2">
+                        {EMOJIS.map(e => (
+                          <button 
+                            key={e}
+                            type="button"
+                            onClick={() => {
+                              setAvatar(e);
+                              setShowEmojiPicker(false);
+                            }}
+                            className={cn(
+                              "h-10 w-10 flex items-center justify-center rounded-xl transition-all",
+                              avatar === e ? "bg-indigo-500/20 text-white scale-110" : "hover:bg-white/5 grayscale hover:grayscale-0"
+                            )}
+                          >
+                            <span className="text-xl">{e}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <input 
+                  name="name" 
+                  type="text" 
+                  required 
+                  autoFocus 
+                  placeholder="Ex: Sapphire Dev"
+                  className="flex-1 h-14 rounded-xl bg-white/5 border border-white/10 px-4 text-white font-bold placeholder:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all"
+                />
+              </div>
+
+                <button 
+                  type="submit" 
+                  className="w-full h-14 rounded-xl bg-white text-black font-black text-lg hover:bg-zinc-200 transition-all active:scale-[0.98] shadow-xl"
+                >
+                  Join Now
+                </button>
             </form>
           </div>
         </div>
@@ -588,8 +695,8 @@ function PlanningBoard({ room, roomId, users, isAdmin, currentUserId }: any) {
         </div>
       )}
       <span className={cn(
-        "text-5xl font-black transition-transform group-hover:scale-125 duration-500",
-        card === "☕" ? "text-4xl" : "",
+        "text-4xl font-black transition-transform group-hover:scale-125 duration-500",
+        card === "☕" ? "text-3xl" : "",
         "text-white"
       )}>
         {card}
@@ -608,43 +715,46 @@ function PlanningBoard({ room, roomId, users, isAdmin, currentUserId }: any) {
       {/* 1. Header Controls for Planning */}
       <div className="shrink-0 flex items-center justify-between bg-white/[0.03] border border-white/5 p-6 rounded-[2rem] shadow-xl">
         <div className="flex flex-col gap-1">
-          <h2 className="text-4xl font-black flex items-center gap-4 text-white tracking-tight">
+          <h2 className="text-3xl font-black flex items-center gap-4 text-white tracking-tight">
             Sprint Planning
             {stats !== null && (
               <div className="flex gap-3 items-center ml-2">
-                <span className="flex items-center gap-2 text-indigo-400 bg-indigo-500/10 px-4 py-1.5 rounded-xl text-xl border border-indigo-500/20 shadow-lg shadow-indigo-500/10">
+                <span className="flex items-center gap-2 text-indigo-400 bg-indigo-500/10 px-4 py-1.5 rounded-xl text-lg border border-indigo-500/20 shadow-lg shadow-indigo-500/10">
                   Avg: <span className="font-bold text-white">{stats.avg}</span>
                 </span>
-                <span className="flex items-center gap-2 text-sky-400 bg-sky-500/10 px-4 py-1.5 rounded-xl text-xl border border-sky-500/20 shadow-lg shadow-sky-500/10">
+                <span className="flex items-center gap-2 text-sky-400 bg-sky-500/10 px-4 py-1.5 rounded-xl text-lg border border-sky-500/20 shadow-lg shadow-sky-500/10">
                   Min: <span className="font-bold text-white">{stats.min}</span>
                 </span>
-                <span className="flex items-center gap-2 text-rose-400 bg-rose-500/10 px-4 py-1.5 rounded-xl text-xl border border-rose-500/20 shadow-lg shadow-rose-500/10">
+                <span className="flex items-center gap-2 text-rose-400 bg-rose-500/10 px-4 py-1.5 rounded-xl text-lg border border-rose-500/20 shadow-lg shadow-rose-500/10">
                   Max: <span className="font-bold text-white">{stats.max}</span>
                 </span>
                 
                 <div className="h-6 w-px bg-white/10 mx-1"></div>
                 
                 {/* Proposed Final Estimate */}
-                <span className="flex items-center gap-2 text-emerald-400 bg-emerald-500/10 px-5 py-1.5 rounded-xl text-xl border border-emerald-500/30 shadow-[0_0_30px_rgba(52,211,153,0.15)] relative overflow-hidden group">
-                  <div className="absolute inset-0 bg-emerald-400/10 blur-xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                  <Sparkles className="h-4 w-4 relative z-10 animate-pulse" />
-                  <span className="relative z-10 tracking-widest uppercase text-sm font-black pt-1">Proposed: </span>
-                  <span className="relative z-10 font-black text-white text-2xl">{stats.proposal}</span>
-                </span>
+                  <span className="flex items-center gap-2 text-emerald-400 bg-emerald-500/10 px-5 py-1.5 rounded-xl text-lg border border-emerald-500/30 shadow-[0_0_30px_rgba(52,211,153,0.15)] relative overflow-hidden group">
+                    <div className="absolute inset-x-0 top-0 h-[1px] bg-emerald-400/50"></div>
+                    <Sparkles className="h-3.5 w-3.5 relative z-10 animate-pulse" />
+                    <span className="relative z-10 tracking-[0.2em] uppercase text-[9px] font-black pt-1">PROPOSED:</span>
+                    <span className="relative z-10 font-black text-white text-2xl tabular-nums">{stats.proposal}</span>
+                  </span>
+                </div>
+              )}
+            </h2>
+            <div className="flex items-center gap-6">
+              <div className="flex items-center gap-2">
+                <span className="h-1.5 w-1.5 rounded-full bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.5)]"></span>
+                <p className="text-zinc-500 text-[10px] uppercase tracking-[0.2em] font-black font-mono">
+                  {users.filter((u: any) => u.vote).length} / {users.length} SQUAD READY
+                </p>
               </div>
-            )}
-          </h2>
-          <div className="flex items-center gap-4">
-            <p className="text-zinc-500 text-xs uppercase tracking-[0.3em] font-black font-mono">
-              {users.filter((u: any) => u.vote).length} / {users.length} Team Members Voted
-            </p>
-            {allVoted && !room.revealed && (
-              <span className="text-xs font-black uppercase tracking-[0.2em] text-emerald-400 bg-emerald-500/10 px-3 py-1.5 rounded-full border border-emerald-500/20 animate-pulse">
-                Ready!
-              </span>
-            )}
+              {allVoted && !room.revealed && (
+                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-400 bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20 animate-pulse">
+                  SCAN COMPLETED
+                </span>
+              )}
+            </div>
           </div>
-        </div>
         
         {isAdmin && (
           <div className="flex items-center gap-3">
@@ -687,34 +797,42 @@ function PlanningBoard({ room, roomId, users, isAdmin, currentUserId }: any) {
                       : "bg-white/[0.02] border-white/5"
                   )}
                 >
-                  <div className="mb-4 h-12 w-12 rounded-full bg-zinc-800 flex items-center justify-center text-xl font-black text-zinc-400 border border-white/5 shadow-inner">
-                    {u.name.charAt(0)}
-                  </div>
-                  <span className="text-xs font-black text-zinc-500 mb-6 truncate w-full text-center uppercase tracking-widest">{u.name}</span>
-                  
                   <div className={cn(
-                    "h-32 w-24 rounded-2xl flex items-center justify-center transition-all duration-700 perspective-1000",
-                    room.revealed ? "rotate-0" : u.vote ? "rotate-y-180" : "opacity-10 scale-90"
+                    "h-36 w-28 rounded-2xl flex items-center justify-center transition-all duration-1000 perspective-1000 group/card cursor-pointer mb-8",
+                    room.revealed ? "rotate-0 scale-110" : u.vote ? "rotate-y-180" : "opacity-10 scale-90"
                   )}>
                       {room.revealed ? (
-                        <div className="h-full w-full rounded-2xl bg-white text-black flex items-center justify-center text-5xl font-black shadow-2xl relative">
-                          <div className="absolute top-2 left-2 text-[8px] opacity-20 font-black">SCRUM</div>
-                          <div className="absolute bottom-2 right-2 text-[8px] opacity-20 font-black rotate-180">SCRUM</div>
-                          {u.vote === "☕" ? <Coffee className="h-10 w-10" /> : u.vote || "-"}
+                        <div className="h-full w-full rounded-2xl bg-white text-black flex flex-col items-center justify-center shadow-[0_25px_50px_rgba(0,0,0,0.5)] relative overflow-hidden ring-1 ring-white/20">
+                          <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/10 to-transparent"></div>
+                          <div className="absolute top-3 left-3 text-[10px] opacity-30 font-black tracking-tighter uppercase">ESTM</div>
+                          <div className="absolute bottom-3 right-3 text-[10px] opacity-30 font-black tracking-tighter self-end rotate-180 uppercase">ESTM</div>
+                          <span className="text-7xl font-black tracking-tighter mt-1">{u.vote === "☕" ? <Coffee className="h-12 w-12" /> : u.vote || "-"}</span>
                         </div>
                       ) : (
                         <div className={cn(
-                          "h-full w-full rounded-2xl flex items-center justify-center shadow-2xl border-2 border-white/10",
-                          u.vote ? "bg-gradient-to-br from-indigo-500 via-indigo-600 to-indigo-700" : "bg-white/5 border-dashed"
+                          "h-full w-full rounded-2xl flex items-center justify-center shadow-2xl border-2 border-white/5 relative overflow-hidden",
+                          u.vote 
+                            ? "bg-gradient-to-br from-indigo-500 via-indigo-600 to-indigo-700 ring-2 ring-indigo-400/20" 
+                            : "bg-white/5 border-dashed"
                         )}>
-                            {u.vote ? (
-                              <div className="relative">
-                                <Zap className="h-8 w-8 text-white animate-pulse opacity-40" />
-                                <div className="absolute inset-0 blur-xl bg-white/20"></div>
-                              </div>
-                            ) : <Plus className="h-8 w-8 text-white/5" />}
+                           <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(255,255,255,0.1),transparent)]"></div>
+                           {u.vote && (
+                             <div className="flex flex-col items-center gap-2 [transform:rotateY(180deg)]">
+                                <div className="h-10 w-10 border border-white/20 rounded-xl bg-white/10 flex items-center justify-center shadow-lg">
+                                   <Zap className="h-5 w-5 text-indigo-200" />
+                                </div>
+                                <span className="text-[10px] font-black uppercase tracking-[0.3em] text-white/50">Voted</span>
+                             </div>
+                           )}
                         </div>
                       )}
+                  </div>
+
+                  <div className="flex flex-col items-center w-full">
+                    <div className="mb-3 h-10 w-10 rounded-full bg-zinc-800 flex items-center justify-center text-sm font-black text-zinc-400 border border-white/5 shadow-inner">
+                      {u.avatar ? <span className="text-xl">{u.avatar}</span> : u.name.charAt(0).toUpperCase()}
+                    </div>
+                    <span className="text-[10px] font-black text-zinc-500 truncate w-full text-center uppercase tracking-[0.2em]">{u.name}</span>
                   </div>
                 </div>
               ))}
@@ -743,7 +861,7 @@ function PlanningBoard({ room, roomId, users, isAdmin, currentUserId }: any) {
 }
 
 // --- FEATURE B: Retrospective Board ---
-function RetroBoard({ room, roomId, users, columns, cards, isAdmin, currentUserId, displayName }: any) {
+function RetroBoard({ room, roomId, users, columns, cards, isAdmin, currentUserId, displayName, avatar }: any) {
   const [newCardText, setNewCardText] = useState("");
   const [newCardImage, setNewCardImage] = useState("");
   const [editingCardId, setEditingCardId] = useState<string | null>(null);
@@ -807,6 +925,7 @@ function RetroBoard({ room, roomId, users, columns, cards, isAdmin, currentUserI
       upvotes: [],
       authorName: displayName || (isAdmin ? room?.creatorName : "") || "Team Member",
       authorId: currentUserId,
+      authorAvatar: avatar || "",
       createdAt: serverTimestamp()
     });
     setNewCardText("");
@@ -916,33 +1035,33 @@ function RetroBoard({ room, roomId, users, columns, cards, isAdmin, currentUserI
   return (
     <div className="flex flex-col gap-8 h-full p-8 overflow-hidden">
       {/* Retro Header */}
-      <div className="shrink-0 flex items-center justify-between">
+      <div className="shrink-0 flex items-center justify-between bg-white/[0.02] border border-white/5 p-6 rounded-[2rem]">
         <div className="flex flex-col gap-1">
-          <h2 className="text-4xl font-bold flex items-center gap-3">
-            Sprint Retrospective
-            <span className="text-purple-400 bg-purple-500/10 px-3 py-1 rounded-lg text-base border border-purple-500/20">
-              {cards.length} Insights
+          <h2 className="text-3xl font-black flex items-center gap-4 text-white tracking-tight">
+            Retro Session
+            <span className="text-purple-400 bg-purple-500/10 px-4 py-1 rounded-xl text-sm border border-purple-500/20 shadow-lg shadow-purple-500/10 uppercase tracking-widest font-black">
+              {cards.length} INSIGHTS
             </span>
           </h2>
-          <p className="text-zinc-500 text-base">Reflect, prioritize, and improve together as a team.</p>
+          <p className="text-zinc-500 text-xs uppercase tracking-[0.3em] font-black font-mono">Archive sprint learnings with team-weighted priorities</p>
         </div>
         
         <div className="flex items-center gap-3">
           {isAdmin && (
              <button 
               onClick={addColumn}
-              className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 py-2.5 px-5 text-base font-bold text-zinc-400 hover:bg-white/10 hover:text-white transition-all"
+              className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 py-3 px-6 text-sm font-black text-zinc-400 hover:bg-white/10 hover:text-white transition-all active:scale-95"
              >
                <Plus className="h-4 w-4" />
-               Add Column
+               New Stream
              </button>
           )}
           
           <div className="flex items-center p-1 bg-white/5 rounded-xl border border-white/10">
             <button 
               onClick={exportToCSV}
-              className="p-2 hover:bg-white/10 rounded-lg text-zinc-400 hover:text-white transition-all active:scale-95 tooltip"
-              title="Export CSV"
+              className="p-3 hover:bg-white/10 rounded-lg text-zinc-400 hover:text-white transition-all active:scale-95 tooltip"
+              title="Export RAW"
             >
               <Download className="h-5 w-5" />
             </button>
@@ -979,106 +1098,53 @@ function RetroBoard({ room, roomId, users, columns, cards, isAdmin, currentUserI
                 {cards.filter((c: RetroCard) => c.columnId === col.id).map((card: RetroCard) => (
                   <div 
                     key={card.id} 
-                    className="group relative flex flex-col gap-4 rounded-3xl bg-white/[0.03] border border-white/5 p-6 hover:bg-white/[0.05] hover:border-indigo-500/30 transition-all hover:scale-[1.02] shadow-xl"
+                    className="group relative flex flex-col gap-4 rounded-3xl bg-white/[0.03] border border-white/5 p-6 hover:bg-white/[0.05] hover:border-indigo-500/30 transition-all hover:translate-y-[-4px] shadow-[0_20px_40px_rgba(0,0,0,0.3)] perspective-1000"
                   >
                     {editingCardId === card.id ? (
                       <div className="flex flex-col gap-3">
+                        <div className="absolute top-0 left-0 w-full h-[2px] bg-indigo-500"></div>
                         <textarea 
                           autoFocus
                           className="w-full bg-transparent border-none text-white text-base focus:outline-none resize-none min-h-[80px] custom-scrollbar"
                           value={editingText}
                           onChange={(e) => setEditingText(e.target.value)}
                         />
-                        {editingImage && (
-                          <div className="relative w-full rounded-xl overflow-hidden my-1 bg-black/40 border border-indigo-500/20">
-                            <img 
-                              key={editingImage}
-                              src={editingImage} 
-                              alt="Preview" 
-                              className="w-full h-auto max-h-60 object-contain opacity-90 transition-opacity" 
-                            />
-                            <button 
-                              onClick={() => setEditingImage("")}
-                              className="absolute top-1 right-1 bg-black/60 p-1 rounded-full text-white hover:bg-black"
-                            >
-                              <X className="h-3 w-3" />
-                            </button>
-                          </div>
-                        )}
-                        {activeGifSearch === card.id && (
-                          <div className="mt-1">
-                            <GifPicker 
-                              onSelect={(url) => {
-                                setEditingImage(url);
-                                setActiveGifSearch(null);
-                              }} 
-                              onClose={() => setActiveGifSearch(null)} 
-                            />
-                          </div>
-                        )}
-
-                        <div className="flex items-center justify-between mt-2 pt-2 border-t border-white/5">
-                          <div className="flex items-center gap-2">
-                            <label className="h-10 px-4 rounded-xl transition-all flex items-center justify-center gap-2 bg-white/5 text-zinc-500 hover:text-white hover:bg-white/10 cursor-pointer active:scale-90 border border-white/5">
-                              <UploadCloud className="h-4 w-4" />
-                              <span className="text-[11px] font-black uppercase tracking-wider">Image</span>
-                              <input type="file" accept="image/*" className="hidden" onChange={(e) => handleImageUpload(e, true)} />
-                            </label>
-                            <button 
-                              onClick={() => {
-                                setActiveGifSearch(activeGifSearch === card.id ? null : card.id);
-                              }}
-                              className={cn(
-                                "h-10 px-4 rounded-xl transition-all flex items-center justify-center active:scale-90 border border-transparent",
-                                activeGifSearch === card.id ? "bg-indigo-500 text-white shadow-lg shadow-indigo-500/20" : "bg-white/5 text-zinc-500 hover:text-white hover:bg-white/10 border-white/5"
-                              )}
-                            >
-                              <span className="text-[11px] font-black uppercase tracking-wider">GIF</span>
-                            </button>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <button onClick={() => setEditingCardId(null)} className="text-sm font-bold text-zinc-500 hover:text-white px-2">Cancel</button>
-                            <button 
-                              onClick={() => updateCard(card.id)}
-                              className="flex items-center gap-1.5 bg-indigo-500 text-white px-3 py-1.5 rounded-lg text-sm font-black hover:bg-indigo-600 transition-all active:scale-95"
-                            >
-                              <Save className="h-3.5 w-3.5" />
-                              Save
-                            </button>
-                          </div>
-                        </div>
+                         <div className="flex items-center justify-end gap-3 mt-4 pt-4 border-t border-white/5">
+                            <button onClick={() => setEditingCardId(null)} className="text-[10px] font-black text-zinc-600 uppercase tracking-widest hover:text-white transition-colors">Abort</button>
+                            <button onClick={() => updateCard(card.id)} className="bg-indigo-500 text-white px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] active:scale-95 shadow-lg shadow-indigo-500/20">Sync Edit</button>
+                         </div>
                       </div>
                     ) : (
                       <>
                         {card.imageUrl && (
-                          <div className="w-full rounded-xl overflow-hidden mt-1 mb-1 bg-black/40 border border-white/5">
+                          <div className="w-full rounded-2xl overflow-hidden bg-black/40 border border-white/5 group-hover:border-white/10 transition-all duration-500 mb-1">
                             <img 
                               src={card.imageUrl} 
-                              alt="Retro attachment" 
-                              className="w-full h-auto max-h-72 object-cover"
+                              alt="Insight" 
+                              className="w-full h-auto max-h-72 object-cover opacity-80 group-hover:opacity-100 transition-opacity"
                               loading="lazy"
-                              onError={(e) => e.currentTarget.style.display = 'none'}
                             />
                           </div>
                         )}
-                        {card.text && <p className="text-base text-zinc-200 leading-relaxed break-words">{card.text}</p>}
+                        {card.text && <p className="text-[15px] text-zinc-200 leading-relaxed font-medium tracking-tight whitespace-pre-wrap">{card.text}</p>}
                         
-                        <div className="flex items-center justify-between mt-2 pt-2 border-t border-white/5">
-                          <div className="flex items-center gap-2.5">
-                            <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-indigo-500/20 text-xs font-black text-indigo-300 border border-indigo-500/30">
-                              {(card.authorName || "M").charAt(0).toUpperCase()}
+                        <div className="flex items-center justify-between mt-2 pt-4 border-t border-white/[0.03]">
+                          <div className="flex items-center gap-3">
+                            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-indigo-500/10 text-[10px] font-black text-indigo-400 border border-indigo-500/20 shadow-inner">
+                              {card.authorAvatar ? <span className="text-sm">{card.authorAvatar}</span> : (card.authorName || "S").charAt(0).toUpperCase()}
                             </div>
-                            <span className="text-[11px] font-black text-zinc-300 uppercase tracking-wider truncate max-w-[120px]">
-                              {card.authorName || "Team Member"}
+                            <span className="text-[9px] font-black text-zinc-500 uppercase tracking-[0.2em]">
+                              {card.authorName || "Squad Member"}
                             </span>
                           </div>
-                          <div className="flex items-center gap-2">
+                          
+                          <div className="flex items-center gap-1.5">
                             {(isAdmin || card.authorName === displayName) && (
-                              <div className="flex items-center opacity-0 group-hover:opacity-100 transition-all">
-                                <button onClick={() => startEditing(card)} className="p-1.5 text-zinc-600 hover:text-indigo-400 transition-colors">
-                                  <Pencil className="h-3.5 w-3.5" />
+                              <div className="flex items-center opacity-0 group-hover:opacity-100 transition-all mr-2">
+                                <button onClick={() => startEditing(card)} className="p-2 text-zinc-600 hover:text-indigo-400 transition-colors">
+                                  <Edit2 className="h-3.5 w-3.5" />
                                 </button>
-                                <button onClick={() => deleteCard(card.id)} className="p-1.5 text-zinc-600 hover:text-red-500 transition-colors">
+                                <button onClick={() => deleteCard(card.id)} className="p-2 text-zinc-600 hover:text-red-500 transition-colors">
                                   <Trash2 className="h-3.5 w-3.5" />
                                 </button>
                               </div>
@@ -1086,15 +1152,14 @@ function RetroBoard({ room, roomId, users, columns, cards, isAdmin, currentUserI
                             <button 
                               disabled={card.authorId === currentUserId || (card.authorName === displayName && displayName !== "")}
                               onClick={() => toggleUpvote(card)}
-                              title={ (card.authorId === currentUserId || (card.authorName === displayName && displayName !== "")) ? "You cannot upvote your own insight" : "" }
                               className={cn(
-                                "flex items-center gap-1.5 px-2 py-1 rounded-full text-sm font-bold transition-all",
+                                "flex items-center gap-2 px-3 py-1.5 rounded-xl text-[10px] font-black transition-all uppercase tracking-widest",
                                 (card.authorId === currentUserId || (card.authorName === displayName && displayName !== "")) 
-                                  ? "opacity-50 grayscale cursor-not-allowed" 
-                                  : "cursor-pointer",
+                                  ? "opacity-30 cursor-not-allowed" 
+                                  : "cursor-pointer active:scale-90",
                                 card.upvotes.includes(currentUserId) 
-                                  ? "bg-indigo-500 text-white" 
-                                  : "bg-white/5 text-zinc-500 hover:bg-white/10"
+                                  ? "bg-indigo-500 text-white shadow-lg shadow-indigo-500/20" 
+                                  : "bg-white/5 text-zinc-500 hover:bg-white/10 hover:text-indigo-400 border border-transparent hover:border-indigo-500/20"
                               )}
                             >
                               <ThumbsUp className={cn("h-3 w-3", card.upvotes.includes(currentUserId) ? "fill-white" : "")} />

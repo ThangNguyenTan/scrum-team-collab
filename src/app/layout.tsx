@@ -13,8 +13,21 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Scrum Team Collab | Frictionless Agile Rooms",
-  description: "Real-time Planning Poker and Retrospectives for agile teams. No accounts required for guests.",
+  title: "ScrumCollab | Ultra-Fast Agile Tools for Elite Squads",
+  description: "Eliminate friction in your Sprint Planning and Retrospectives. No signups, no seat limits. Just pure collaborative engineering for agile teams.",
+  keywords: ["scrum", "agile", "planning poker", "retrospective", "team collaboration", "free agile tools"],
+  openGraph: {
+    title: "ScrumCollab | Ultra-Fast Agile Tools",
+    description: "Real-time Planning Poker and Retrospectives for agile teams.",
+    type: "website",
+    url: "https://scrumcollab.io", // Placeholder
+    siteName: "ScrumCollab",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "ScrumCollab | Ultra-Fast Agile Tools",
+    description: "Eliminate friction in your Sprint Planning and Retrospectives.",
+  },
 };
 
 export default function RootLayout({

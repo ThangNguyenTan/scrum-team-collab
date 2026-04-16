@@ -3,10 +3,8 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { 
-  signInWithPopup, 
-  GoogleAuthProvider, 
   onAuthStateChanged, 
-  signOut,
+  signInAnonymously,
   User 
 } from "firebase/auth";
 import { 
@@ -15,56 +13,82 @@ import {
   serverTimestamp 
 } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
-import { LayoutPanelLeft, Users, Zap, CheckCircle2, ChevronRight, LogOut } from "lucide-react";
+import { LayoutPanelLeft, Users, Zap, CheckCircle2, ChevronRight, LogOut, Smile } from "lucide-react";
 import { cn } from "@/lib/utils";
+
+const EMOJIS = ["🚀", "🔥", "🐱", "🐶", "🦊", "🐼", "🦁", "🦖", "🛸", "🧠", "💎", "🌈", "☀️", "🌙", "⭐", "🦾", "🎨", "🎭", "🎮", "🎸"];
 
 export default function Home() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
+  const [name, setName] = useState("");
+  const [avatar, setAvatar] = useState(EMOJIS[0]);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (u) => {
-      setUser(u);
-      setLoading(false);
-
-      // Auto-redirect to last room if logged in and at root
-      if (u) {
-        const lastRoom = localStorage.getItem("scrum_last_room");
-        if (lastRoom) {
-          router.push(`/room/${lastRoom}`);
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          const cards = entry.target.querySelectorAll(".feature-card");
+          cards.forEach((card, i) => {
+            setTimeout(() => {
+              card.classList.remove("opacity-0", "translate-y-8");
+              card.classList.add("opacity-100", "translate-y-0", "duration-1000", "transition-all");
+            }, i * 150);
+          });
         }
+      });
+    }, { threshold: 0.1 });
+
+    const target = document.querySelector("#feature-grid");
+    if (target) observer.observe(target);
+
+    return () => observer.disconnect();
+  }, [loading]);
+
+  useEffect(() => {
+    // Attempt auto-login anonymously if not logged in
+    const unsubscribe = onAuthStateChanged(auth, async (u) => {
+      if (!u) {
+        await signInAnonymously(auth);
+      } else {
+        setUser(u);
+        setLoading(false);
       }
     });
+
+    const savedName = localStorage.getItem("scrum_user_name");
+    if (savedName) setName(savedName);
+
+    const savedAvatar = localStorage.getItem("scrum_user_avatar");
+    if (savedAvatar) setAvatar(savedAvatar); else {
+      setAvatar(EMOJIS[Math.floor(Math.random() * EMOJIS.length)]);
+    }
+
     return () => unsubscribe();
-  }, [router]);
+  }, []);
 
-  const handleLogin = async () => {
-    try {
-      const provider = new GoogleAuthProvider();
-      await signInWithPopup(auth, provider);
-    } catch (error) {
-      console.error("Login failed:", error);
-    }
-  };
-
-  const handleLogout = async () => {
-    try {
-      await signOut(auth);
-    } catch (error) {
-      console.error("Logout failed:", error);
-    }
-  };
-
-  const createRoom = async () => {
-    if (!user) return;
+  const createRoom = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim()) return;
+    
     setCreating(true);
+    localStorage.setItem("scrum_user_name", name);
+    localStorage.setItem("scrum_user_avatar", avatar);
+    
     try {
+      let currentUser = auth.currentUser;
+      if (!currentUser) {
+        const cred = await signInAnonymously(auth);
+        currentUser = cred.user;
+      }
+
       // Create a new room in Firestore
       const roomRef = await addDoc(collection(db, "rooms"), {
-        creatorId: user.uid,
-        creatorName: user.displayName,
+        creatorId: currentUser.uid,
+        creatorName: name,
         status: "planning", // default starting mode
         revealed: false,
         createdAt: serverTimestamp(),
@@ -89,133 +113,164 @@ export default function Home() {
   return (
     <div className="flex flex-col min-h-screen bg-[#0a0a0b] text-white selection:bg-indigo-500/30">
       {/* Navigation */}
-      <nav className="fixed top-0 z-50 w-full border-b border-white/5 bg-black/20 backdrop-blur-xl">
-        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
-          <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 shadow-lg shadow-indigo-500/20">
-              <Zap className="h-5 w-5 text-white" />
+      <nav className="fixed top-6 left-6 right-6 z-50 flex items-center justify-center pointer-events-none">
+        <div className="mx-auto flex h-14 w-full max-w-7xl items-center justify-between px-6 pointer-events-auto rounded-[1.25rem] border border-white/5 bg-black/40 backdrop-blur-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
+          <div className="flex items-center gap-3">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-500 shadow-[0_0_15px_rgba(99,102,241,0.2)]">
+              <Zap className="h-4 w-4 text-white" />
             </div>
-            <span className="text-xl font-bold tracking-tight">ScrumCollab</span>
+            <span className="text-lg font-black tracking-tighter text-white">ScrumCollab</span>
           </div>
           
-          <div className="flex items-center gap-4">
-            {user ? (
-              <div className="flex items-center gap-3">
-                <img 
-                  src={user.photoURL || ""} 
-                  alt={user.displayName || "User"} 
-                  className="h-8 w-8 rounded-full border border-white/10"
-                />
-                <button 
-                  onClick={handleLogout}
-                  className="flex items-center gap-2 text-sm font-medium text-zinc-400 transition-colors hover:text-white"
-                >
-                  <LogOut className="h-4 w-4" />
-                  Sign Out
-                </button>
-              </div>
-            ) : (
-              <button 
-                onClick={handleLogin}
-                className="rounded-full bg-white/5 py-2 px-6 text-sm font-semibold text-white transition-all hover:bg-white/10 hover:ring-1 hover:ring-white/20"
-              >
-                Sign In
-              </button>
-            )}
+          <div className="flex items-center gap-6">
+            <div className="hidden sm:flex items-center gap-2 text-[9px] font-black uppercase tracking-[0.2em] text-zinc-500 bg-white/5 px-3 py-1.5 rounded-full border border-white/5">
+               Vibe: <span className="text-emerald-500">Tactical</span>
+            </div>
           </div>
         </div>
       </nav>
 
       {/* Hero Section */}
-      <main className="relative flex-grow flex items-center justify-center overflow-hidden pt-16">
-        {/* Background Gradients */}
-        <div className="absolute top-0 left-1/4 -z-10 h-[500px] w-[500px] rounded-full bg-indigo-500/10 blur-[120px]"></div>
-        <div className="absolute top-1/4 right-1/4 -z-10 h-[400px] w-[400px] rounded-full bg-purple-600/10 blur-[100px]"></div>
+      <main className="relative flex-grow flex flex-col items-center justify-center overflow-hidden pt-32 pb-12">
+        {/* Engineering Mesh Gradients */}
+        <div className="absolute top-[-10%] left-[-10%] -z-10 h-[60%] w-[60%] rounded-full bg-indigo-500/10 blur-[120px]"></div>
+        <div className="absolute bottom-[-10%] right-[-10%] -z-10 h-[50%] w-[50%] rounded-full bg-purple-600/10 blur-[120px]"></div>
+        <div className="absolute top-[20%] right-[10%] -z-10 h-[30%] w-[30%] rounded-full bg-emerald-500/5 blur-[100px]"></div>
 
-        <div className="mx-auto max-w-7xl px-6 py-16 text-center">
-          <div className="grid grid-cols-1 items-center gap-16 lg:grid-cols-2">
-            <div className="flex flex-col items-center gap-8">
-              <div className="inline-flex w-fit items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-1.5 backdrop-blur-sm">
-                <div className="h-2 w-2 animate-pulse rounded-full bg-indigo-400"></div>
-                <span className="text-xs font-semibold uppercase tracking-wider text-indigo-200">Real-time Collaboration</span>
+        <div className="mx-auto max-w-7xl px-6 text-center z-10">
+          <div className="flex flex-col items-center gap-16 animate-in fade-in slide-in-from-bottom-8 duration-1000">
+            <div className="flex flex-col items-center gap-6">
+              <div className="inline-flex items-center gap-2 rounded-full border border-indigo-500/30 bg-indigo-500/5 px-4 py-2 backdrop-blur-md">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-500"></span>
+                </span>
+                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-300">Fast-Track Agile v2.0</span>
               </div>
               
-              <h1 className="text-5xl font-extrabold tracking-tight text-white sm:text-7xl">
-                Agile teams stay <br />
-                <span className="bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">in perfect sync.</span>
+              <h1 className="text-5xl font-black tracking-tighter text-white sm:text-7xl lg:text-8xl leading-[0.85]">
+                Agile speed <br />
+                <span className="bg-gradient-to-r from-indigo-400 via-emerald-400 to-indigo-400 bg-clip-text text-transparent">redefined.</span>
               </h1>
               
-              <p className="max-w-xl text-lg leading-relaxed text-zinc-400">
-                The ultimate friction-free tool for Sprint Planning and Retrospectives. 
-                Guests join via URL—no account creation required for your team members.
+              <p className="max-w-xl text-lg font-medium leading-relaxed text-zinc-400 opacity-80">
+                Eliminate friction. No signups, no seat limits. 
+                Just pure collaborative engineering for elite teams.
               </p>
-
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-                {user ? (
-                  <button 
-                    onClick={createRoom}
-                    disabled={creating}
-                    className="group relative flex items-center justify-center gap-2 rounded-xl bg-white px-8 py-4 text-lg font-bold text-black transition-all hover:scale-[1.02] hover:shadow-[0_0_40px_rgba(255,255,255,0.2)] disabled:opacity-50"
-                  >
-                    {creating ? "Creating Room..." : "Create new Scrum Room"}
-                    <ChevronRight className="h-5 w-5 transition-transform group-hover:translate-x-1" />
-                  </button>
-                ) : (
-                  <button 
-                    onClick={handleLogin}
-                    className="flex items-center justify-center gap-3 rounded-xl border border-white/20 bg-white/5 px-8 py-4 text-lg font-bold text-white transition-all hover:bg-white/10 hover:ring-1 hover:ring-white/30"
-                  >
-                    <img src="https://www.google.com/favicon.ico" className="h-5 w-5" alt="Google" />
-                    Sign in with Google to start
-                  </button>
-                )}
-                <div className="flex -space-x-3 overflow-hidden ml-4">
-                  {[1,2,3,4].map(i => (
-                    <img 
-                      key={i}
-                      className="inline-block h-8 w-8 rounded-full ring-2 ring-[#0a0a0b]" 
-                      src={`https://i.pravatar.cc/100?u=${i}`} 
-                      alt="" 
-                    />
-                  ))}
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-zinc-800 text-[10px] ring-2 ring-[#0a0a0b]">+12</div>
-                </div>
-              </div>
             </div>
 
-            {/* Feature Cards */}
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-              <div className="group rounded-3xl border border-white/5 bg-gradient-to-b from-white/10 to-transparent p-8 backdrop-blur-xl transition-all hover:border-white/20">
-                <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-500/20 text-indigo-400 group-hover:scale-110 transition-transform">
-                  <Zap className="h-6 w-6" />
+            <div className="w-full max-w-lg glass p-2 rounded-[2.5rem] shadow-2xl">
+              <form onSubmit={createRoom} className="flex flex-col gap-3 bg-[#0a0a0b] p-6 rounded-[2rem] border border-white/5">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500">Creator Identity</span>
+                  <span className="text-[10px] font-mono text-zinc-600">ID: {user?.uid?.slice(0, 8) || "ANON-0X"}</span>
                 </div>
-                <h3 className="mb-2 text-xl font-bold">Planning Poker</h3>
-                <p className="text-zinc-400">Fibonacci-based voting with instant average calculation and admin reveal controls.</p>
-              </div>
-              
-              <div className="group rounded-3xl border border-white/5 bg-gradient-to-b from-white/10 to-transparent p-8 backdrop-blur-xl transition-all hover:border-white/20">
-                <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-purple-500/20 text-purple-400 group-hover:scale-110 transition-transform">
-                  <LayoutPanelLeft className="h-6 w-6" />
+                
+                <div className="relative group/input flex items-center gap-3">
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                      className={cn(
+                        "h-[68px] w-[68px] rounded-2xl bg-zinc-900 border border-white/5 flex items-center justify-center text-3xl transition-all hover:bg-white/5 active:scale-95",
+                        showEmojiPicker && "ring-2 ring-indigo-500/50 border-indigo-500/30"
+                      )}
+                    >
+                      {avatar}
+                    </button>
+
+                    {showEmojiPicker && (
+                      <div className="absolute top-20 left-0 z-50 w-64 bg-[#1a1a1c] p-4 rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] border border-white/10 animate-in fade-in zoom-in duration-200">
+                        <div className="grid grid-cols-5 gap-2">
+                          {EMOJIS.map(e => (
+                            <button 
+                              key={e}
+                              type="button"
+                              onClick={() => {
+                                setAvatar(e);
+                                setShowEmojiPicker(false);
+                              }}
+                              className={cn(
+                                "h-10 w-10 flex items-center justify-center rounded-xl transition-all",
+                                avatar === e ? "bg-indigo-500/20 text-white scale-110" : "hover:bg-white/5 grayscale hover:grayscale-0"
+                              )}
+                            >
+                              <span className="text-xl">{e}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="relative flex-1 group/field">
+                    <input 
+                      type="text"
+                      required
+                      placeholder="Identify yourself..."
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      className="w-full rounded-2xl bg-zinc-900 border border-white/5 px-6 py-5 text-base font-bold text-white placeholder:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 transition-all duration-300"
+                    />
+                    <div className="absolute right-4 top-1/2 -translate-y-1/2 opacity-0 group-focus-within/field:opacity-100 transition-opacity">
+                      <span className="text-[9px] font-mono text-indigo-400">READY__</span>
+                    </div>
+                  </div>
                 </div>
-                <h3 className="mb-2 text-xl font-bold">Retrospectives</h3>
-                <p className="text-zinc-400">Real-time Kanban boards with upvoting and customizable columns for deep team insights.</p>
-              </div>
-              
-              <div className="group rounded-3xl border border-white/5 bg-gradient-to-b from-white/10 to-transparent p-8 backdrop-blur-xl transition-all hover:border-white/20">
-                <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-pink-500/20 text-pink-400 group-hover:scale-110 transition-transform">
-                  <Users className="h-6 w-6" />
+                
+                <button 
+                  type="submit"
+                  disabled={creating}
+                  className="group relative h-16 w-full overflow-hidden rounded-2xl bg-white transition-all hover:scale-[1.01] active:scale-[0.98] disabled:opacity-50"
+                >
+                  <div className="absolute inset-0 bg-gradient-to-r from-indigo-500 to-purple-600 opacity-0 group-hover:opacity-10 transition-opacity duration-500"></div>
+                  <span className="relative flex items-center justify-center gap-3 text-base font-black text-black">
+                    {creating ? (
+                      <div className="h-5 w-5 animate-spin rounded-full border-2 border-black border-t-transparent" />
+                    ) : (
+                      <>
+                        Initialize SCRUM_SESSION
+                        <ChevronRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+                      </>
+                    )}
+                  </span>
+                </button>
+                
+              </form>
+            </div>
+
+            <div id="feature-grid" className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 w-full mt-24">
+              {[
+                { title: "Planning Poker", desc: "Fibonacci-based voting with instant extraction.", icon: Zap, color: "indigo", styles: "hover:border-indigo-500/30", iconStyles: "bg-indigo-500/10 text-indigo-400" },
+                { title: "Retrospectives", desc: "Kanban orchestration with weighted voting.", icon: LayoutPanelLeft, color: "purple", styles: "hover:border-purple-500/30", iconStyles: "bg-purple-500/10 text-purple-400" },
+                { title: "Dynamic Sync", desc: "Identity-less collaboration. Zero setup friction.", icon: Users, color: "pink", styles: "hover:border-pink-500/30", iconStyles: "bg-pink-500/10 text-pink-400" },
+                { title: "Deep Data", desc: "Generate schema-compliant PDF or CSV archives.", icon: CheckCircle2, color: "emerald", styles: "hover:border-emerald-500/30", iconStyles: "bg-emerald-500/10 text-emerald-400" }
+              ].map((f, i) => (
+                <div 
+                  key={i} 
+                  className={cn(
+                    "feature-card group glass-card p-10 transition-all hover:bg-white/[0.04] opacity-0 translate-y-8 h-full relative flex flex-col items-center text-center",
+                    f.styles
+                  )}
+                >
+                  <div className={cn(
+                    "mb-8 flex h-20 w-20 items-center justify-center rounded-[2rem] transition-transform group-hover:scale-110 duration-500 shadow-xl",
+                    f.iconStyles
+                  )}>
+                    <f.icon className="h-10 w-10" />
+                  </div>
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-black uppercase tracking-tight flex items-center justify-center gap-3">
+                      <span className="text-[10px] font-mono text-zinc-700 opacity-50">0{i+1}</span>
+                      {f.title}
+                    </h3>
+                    <p className="text-zinc-500 text-[13px] leading-relaxed max-w-[240px] mx-auto font-medium">{f.desc}</p>
+                  </div>
+                  
+                  {/* Decorative Engineering Lines */}
+                  <div className="absolute bottom-0 left-0 h-[1.5px] w-0 bg-gradient-to-r from-transparent via-white/20 to-transparent group-hover:w-full transition-all duration-700"></div>
                 </div>
-                <h3 className="mb-2 text-xl font-bold">Guest Access</h3>
-                <p className="text-zinc-400">Teammates join via URL with one click. No login fatigue, just collaboration.</p>
-              </div>
-              
-              <div className="group rounded-3xl border border-white/5 bg-gradient-to-b from-white/10 to-transparent p-8 backdrop-blur-xl transition-all hover:border-white/20">
-                <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-500/20 text-emerald-400 group-hover:scale-110 transition-transform">
-                  <CheckCircle2 className="h-6 w-6" />
-                </div>
-                <h3 className="mb-2 text-xl font-bold">Export Ready</h3>
-                <p className="text-zinc-400">Generate professional PDFs or clean CSVs of your session data instantly.</p>
-              </div>
+              ))}
             </div>
           </div>
         </div>
