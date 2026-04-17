@@ -228,7 +228,7 @@ export function PlanningBoard({ room, roomId, users, isAdmin, currentUserId }: P
               )}
             >
               {room.revealed ? <EyeOff className="h-3 w-3 sm:h-4 sm:w-4" /> : <Eye className="h-3 w-3 sm:h-4 sm:w-4" />}
-              {room.revealed ? "Hide Results" : allVoted ? "Ready" : "Reveal"}
+              {room.revealed ? "Hide Results" : allVoted ? "Ready to Reveal" : "Reveal Votes"}
             </button>
           </div>
         )}
@@ -341,7 +341,7 @@ export function PlanningBoard({ room, roomId, users, isAdmin, currentUserId }: P
               scrollRef.current.scrollLeft = scrollLeftPos.current - walk;
               updateScrollButtons();
             }}
-            className="flex overflow-x-auto relative z-10 w-full max-w-full items-center py-8 sm:py-10 md:py-12 px-4 sm:px-8 xl:px-12 custom-scrollbar snap-x snap-mandatory sm:snap-none touch-pan-x cursor-grab active:cursor-grabbing [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
+            className="flex overflow-x-auto relative z-10 w-full max-w-full items-center py-8 sm:py-10 md:py-12 px-4 sm:px-8 xl:px-12 scrollbar-none snap-x snap-mandatory sm:snap-none touch-pan-x cursor-grab active:cursor-grabbing"
          >
             <div className="flex gap-3 sm:gap-4 md:gap-6 mx-auto items-center">
               {cards.map((card) => (
