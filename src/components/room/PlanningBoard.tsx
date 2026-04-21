@@ -4,7 +4,7 @@ import { db } from "@/lib/firebase";
 import { Coffee, Zap, RefreshCw, EyeOff, Eye, CheckCircle2, Sparkles, ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { RoomData, RoomUser } from "@/types";
-import { PLANNING_CARDS } from "@/constants";
+import { PLANNING_CARDS, ANIMAL_MAPPING } from "@/constants";
 
 interface PlanningBoardProps {
   room: RoomData;
@@ -140,7 +140,7 @@ export function PlanningBoard({ room, roomId, users, isAdmin, currentUserId }: P
     if (votes.length === 0) return { avg: "0.0", min: 0, max: 0, proposal: "0" };
     
     const avgVal = votes.reduce((a, b) => a + b, 0) / votes.length;
-    const fibSequence = [0, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89];
+    const fibSequence = [1, 2, 3, 5, 8, 13, 21, 34, 55, 89];
     const proposal = fibSequence.find(fib => fib >= avgVal) ?? 89;
 
     return {
@@ -151,41 +151,73 @@ export function PlanningBoard({ room, roomId, users, isAdmin, currentUserId }: P
     };
   }, [filteredUsers, room.revealed]);
 
-  const renderCard = (card: string) => (
-    <button
-      key={card}
-      onClick={() => handleVote(card)}
-      disabled={room.revealed}
-      className={cn(
-        "flex flex-col items-center justify-center h-20 w-14 sm:h-24 sm:w-16 md:h-28 md:w-20 lg:h-32 lg:w-24 xl:h-40 xl:w-28 rounded-2xl lg:rounded-3xl border-3 transition-all group relative",
-        myVote === card 
-          ? "bg-indigo-500 border-indigo-400 scale-110 shadow-[0_20px_60px_rgba(99,102,241,0.4)] z-20" 
-          : "bg-black/60 border-white/10",
-        !room.revealed && myVote !== card && "hover:border-white/40 hover:bg-white/10 hover:-translate-y-3 active:scale-95",
-        room.revealed && myVote !== card && "opacity-20 cursor-not-allowed",
-        room.revealed && myVote === card && "cursor-not-allowed"
-      )}
-    >
-      {myVote === card && (
-        <div className="absolute -top-3 -right-3 h-8 w-8 rounded-full bg-white text-indigo-600 flex items-center justify-center shadow-xl z-30">
-          <CheckCircle2 className="h-5 w-5" />
+  const renderCard = (card: string) => {
+    const animal = ANIMAL_MAPPING[card];
+    
+    return (
+      <button
+        key={card}
+        onClick={() => handleVote(card)}
+        disabled={room.revealed}
+        className={cn(
+          "flex flex-col items-center justify-center h-20 w-14 sm:h-24 sm:w-16 md:h-28 md:w-20 lg:h-32 lg:w-24 xl:h-44 xl:w-32 rounded-2xl lg:rounded-3xl border-3 transition-all group relative",
+          myVote === card 
+            ? "bg-indigo-500 border-indigo-400 scale-110 shadow-[0_20px_60px_rgba(99,102,241,0.4)] z-20" 
+            : "bg-black/60 border-white/10",
+          !room.revealed && myVote !== card && "hover:border-white/40 hover:bg-white/10 hover:-translate-y-3 active:scale-95",
+          room.revealed && myVote !== card && "opacity-20 cursor-not-allowed",
+          room.revealed && myVote === card && "cursor-not-allowed"
+        )}
+      >
+        {/* Animal Backdrop Wrapper with Overflow Hidden */}
+        {animal && (
+          <div className="absolute inset-0 z-0 overflow-hidden rounded-[calc(1.5rem-3px)] lg:rounded-[calc(2.25rem-3px)]">
+            <img 
+              src={animal.image} 
+              alt={animal.name}
+              className={cn(
+                "h-full w-full object-cover transition-all duration-700",
+                myVote === card ? "opacity-40 grayscale-0 scale-110" : "opacity-10 grayscale group-hover:opacity-30 group-hover:grayscale-0"
+              )}
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent"></div>
+          </div>
+        )}
+
+        {myVote === card && (
+          <div className="absolute -top-4 -right-4 h-10 w-10 rounded-full bg-white text-indigo-600 flex items-center justify-center shadow-[0_10px_25px_rgba(0,0,0,0.3)] z-30 animate-in zoom-in duration-300 ring-4 ring-indigo-500/20">
+            <CheckCircle2 className="h-6 w-6" />
+          </div>
+        )}
+        
+        <div className="relative z-10 flex flex-col items-center">
+          <span className={cn(
+            "text-xl sm:text-2xl md:text-3xl xl:text-5xl font-black transition-transform group-hover:scale-125 duration-500 drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]",
+            card === "☕" ? "text-lg sm:text-xl md:text-2xl xl:text-3xl" : "",
+            "text-white"
+          )}>
+            {card}
+          </span>
+          {animal && (
+            <span className={cn(
+              "text-[6px] md:text-[8px] xl:text-[10px] uppercase font-black tracking-[0.2em] mt-1 transition-all",
+              myVote === card ? "text-white opacity-100" : "text-white/40 group-hover:text-white/80"
+            )}>
+              {animal.name}
+            </span>
+          )}
+          {!animal && (
+            <span className={cn(
+              "text-[8px] md:text-[9px] xl:text-[10px] uppercase font-black tracking-widest opacity-30 mt-1 sm:mt-2",
+              myVote === card ? "text-white opacity-80" : "text-white/40"
+            )}>
+              Points
+            </span>
+          )}
         </div>
-      )}
-      <span className={cn(
-        "text-xl sm:text-2xl md:text-3xl xl:text-4xl font-black transition-transform group-hover:scale-125 duration-500",
-        card === "☕" ? "text-lg sm:text-xl md:text-2xl xl:text-3xl" : "",
-        "text-white"
-      )}>
-        {card}
-      </span>
-      <span className={cn(
-        "text-[8px] md:text-[9px] xl:text-[10px] uppercase font-black tracking-widest opacity-30 mt-1 sm:mt-2",
-        myVote === card ? "text-white opacity-80" : "text-white/40"
-      )}>
-        Points
-      </span>
-    </button>
-  );
+      </button>
+    );
+  };
 
   return (
     <div className="flex flex-col h-full gap-3 md:gap-4 xl:gap-6 p-3 md:p-4 lg:p-6 xl:p-8 overflow-y-auto overflow-x-hidden pb-12 lg:pb-8">
@@ -307,13 +339,28 @@ export function PlanningBoard({ room, roomId, users, isAdmin, currentUserId }: P
                           "h-full w-full rounded-lg md:rounded-2xl bg-white text-black flex flex-col items-center justify-center shadow-[0_25px_50px_rgba(0,0,0,0.5)] relative overflow-hidden ring-2",
                           u.group ? getGroupStyles(u.group).split(' ')[0].replace('border-', 'ring-') : "ring-white/20"
                         )}>
+                          {/* Animal Reveal Backdrop */}
+                          {u.vote && ANIMAL_MAPPING[u.vote] && (
+                            <div className="absolute inset-0 z-0">
+                               <img 
+                                 src={ANIMAL_MAPPING[u.vote].image} 
+                                 alt={ANIMAL_MAPPING[u.vote].name}
+                                 className="h-full w-full object-cover opacity-20 filter sepia-[0.3]"
+                               />
+                            </div>
+                          )}
                           <div className={cn(
-                            "absolute inset-0 bg-gradient-to-br from-transparent to-transparent",
+                            "absolute inset-0 bg-gradient-to-br from-transparent to-transparent z-10",
                             u.group && getGroupStyles(u.group).split(' ')[1].replace('bg-', 'from-').replace('/5', '/20')
                           )}></div>
-                          <div className="absolute top-1 left-1 lg:top-3 lg:left-3 text-[6px] md:text-[8px] opacity-30 font-black tracking-tighter uppercase">ESTM</div>
-                          <div className="absolute bottom-1 right-1 lg:bottom-3 lg:right-3 text-[6px] md:text-[8px] opacity-30 font-black tracking-tighter self-end rotate-180 uppercase">ESTM</div>
-                          <span className="text-3xl md:text-5xl xl:text-7xl font-black tracking-tighter mt-1">{u.vote === "☕" ? <Coffee className="h-6 w-6 lg:h-12 lg:w-12" /> : (u.vote || "-")}</span>
+                          <div className="absolute top-1 left-1 lg:top-3 lg:left-3 text-[6px] md:text-[8px] opacity-30 font-black tracking-tighter uppercase z-20">ESTM</div>
+                          <div className="absolute bottom-1 right-1 lg:bottom-3 lg:right-3 text-[6px] md:text-[8px] opacity-30 font-black tracking-tighter self-end rotate-180 uppercase z-20">ESTM</div>
+                          <div className="flex flex-col items-center relative z-20">
+                            <span className="text-3xl md:text-5xl xl:text-7xl font-black tracking-tighter mt-1">{u.vote === "☕" ? <Coffee className="h-6 w-6 lg:h-12 lg:w-12" /> : (u.vote || "-")}</span>
+                            {u.vote && ANIMAL_MAPPING[u.vote] && (
+                              <span className="text-[8px] md:text-[10px] font-black uppercase tracking-[0.2em] text-black/60">{ANIMAL_MAPPING[u.vote].name}</span>
+                            )}
+                          </div>
                         </div>
                       ) : (
                         <div className={cn(
