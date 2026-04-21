@@ -193,7 +193,7 @@ export function PlanningBoard({ room, roomId, users, isAdmin, currentUserId }: P
         <div className="relative z-10 flex flex-col items-center">
           <span className={cn(
             "text-xl sm:text-2xl md:text-3xl xl:text-5xl font-black transition-transform group-hover:scale-125 duration-500 drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]",
-            card === "☕" ? "text-lg sm:text-xl md:text-2xl xl:text-3xl" : "",
+            card === "☕" ? "text-2xl sm:text-2xl md:text-3xl xl:text-5xl" : "",
             "text-white"
           )}>
             {card}
@@ -206,7 +206,7 @@ export function PlanningBoard({ room, roomId, users, isAdmin, currentUserId }: P
               {animal.name}
             </span>
           )}
-          {!animal && (
+          {!animal && card !== "☕" && (
             <span className={cn(
               "text-[8px] md:text-[9px] xl:text-[10px] uppercase font-black tracking-widest opacity-30 mt-1 sm:mt-2",
               myVote === card ? "text-white opacity-80" : "text-white/40"
