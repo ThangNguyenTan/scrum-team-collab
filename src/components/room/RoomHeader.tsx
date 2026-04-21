@@ -74,7 +74,7 @@ export function RoomHeader({
         
         <div className="hidden sm:flex items-center gap-2 text-xs sm:text-base text-zinc-400 bg-white/5 px-2 sm:px-3 py-1.5 rounded-lg border border-white/5">
            <div className="h-2 w-2 rounded-full bg-emerald-500"></div>
-           {users.length} Team
+           {`${users.length} ${users.length <= 1 ? "Member" : "Members"}`}
         </div>
         
         <button 

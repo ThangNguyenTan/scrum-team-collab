@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState, useEffect } from "react";
 import { doc, updateDoc, setDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { Coffee, Zap, RefreshCw, EyeOff, Eye, CheckCircle2, Sparkles, ChevronLeft, ChevronRight } from "lucide-react";
+import { Coffee, Zap, RefreshCw, EyeOff, Eye, CheckCircle2, Sparkles, ChevronLeft, ChevronRight, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { RoomData, RoomUser } from "@/types";
 import { PLANNING_CARDS, ANIMAL_MAPPING } from "@/constants";
@@ -250,6 +250,21 @@ export function PlanningBoard({ room, roomId, users, isAdmin, currentUserId }: P
               </div>
             )}
           </h2>
+          
+          {/* Voter Count & Progress */}
+          <div className="flex items-center gap-2 mt-1 xl:mt-2">
+            <div className="flex items-center gap-1.5 text-[10px] md:text-xs font-black uppercase tracking-[0.2em] text-white/30 bg-white/5 px-2 py-1 rounded-md border border-white/5">
+              <Users className="h-3 w-3" />
+              Voted: <span className="text-white/60 tabular-nums">{users.filter(u => u.vote).length} / {users.length}</span>
+            </div>
+            
+            {allVoted && (
+              <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 animate-in zoom-in duration-500">
+                <CheckCircle2 className="h-3 w-3 fill-emerald-400/20" />
+                <span className="text-[10px] font-black uppercase tracking-widest">Ready</span>
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="flex flex-col gap-3">
