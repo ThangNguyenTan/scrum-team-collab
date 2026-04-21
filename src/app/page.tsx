@@ -109,6 +109,8 @@ export default function Home() {
         createdAt: serverTimestamp(),
       });
       
+      localStorage.setItem(`scrum_is_creator_${roomRef.id}`, "true");
+      
       // Redirect to the new room
       router.push(`/room/${roomRef.id}`);
     } catch (error) {

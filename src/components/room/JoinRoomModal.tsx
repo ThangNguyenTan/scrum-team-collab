@@ -4,24 +4,42 @@ import { cn } from "@/lib/utils";
 
 interface JoinRoomModalProps {
   avatar: string;
+  defaultName?: string;
+  buttonText?: string;
   setAvatar: (avatar: string) => void;
   showEmojiPicker: boolean;
   setShowEmojiPicker: (show: boolean) => void;
   handleJoin: (name: string) => void;
+  onClose?: () => void;
 }
 
 export function JoinRoomModal({ 
   avatar, 
+  defaultName,
+  buttonText = "Join Room",
   setAvatar, 
   showEmojiPicker, 
   setShowEmojiPicker, 
-  handleJoin 
+  handleJoin,
+  onClose
 }: JoinRoomModalProps) {
   const emojiPickerRef = useRef<HTMLDivElement>(null);
 
+  const handleBackdropClick = (e: React.MouseEvent) => {
+    if (e.target === e.currentTarget && onClose) {
+      onClose();
+    }
+  };
+
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-6">
-      <div className="w-full max-w-sm rounded-[2rem] border border-white/10 bg-[#161618] p-8 shadow-2xl">
+    <div 
+      onClick={handleBackdropClick}
+      className={cn(
+        "fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-6",
+        onClose && "cursor-pointer"
+      )}
+    >
+      <div className="w-full max-w-sm rounded-[2rem] border border-white/10 bg-[#161618] p-8 shadow-2xl cursor-default">
         <h2 className="text-2xl font-bold text-white mb-2">Joining Scrum Room</h2>
         <p className="text-zinc-400 text-sm mb-6">Enter a display name to get started. No account needed.</p>
         <form onSubmit={(e) => {
@@ -60,6 +78,7 @@ export function JoinRoomModal({
               type="text" 
               required 
               autoFocus 
+              defaultValue={defaultName}
               placeholder="Ex: Sapphire Dev"
               className="flex-1 h-14 rounded-xl bg-white/5 border border-white/10 px-4 text-white font-bold placeholder:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all"
             />
@@ -69,7 +88,7 @@ export function JoinRoomModal({
             type="submit" 
             className="w-full h-14 rounded-xl bg-white text-black font-black text-lg hover:bg-zinc-200 transition-all active:scale-[0.98] shadow-xl"
           >
-            Join Now
+            {buttonText}
           </button>
         </form>
       </div>

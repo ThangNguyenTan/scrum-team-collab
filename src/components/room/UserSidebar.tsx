@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Users, Crown, CheckCircle2, ChevronLeft, ChevronRight } from "lucide-react";
+import { Users, Crown, CheckCircle2, ChevronLeft, ChevronRight, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { RoomData, RoomUser } from "@/types";
 
@@ -7,9 +7,10 @@ interface UserSidebarProps {
   sortedUsers: RoomUser[];
   room: RoomData | null;
   user: any; // User | null
+  setShowJoinModal: (show: boolean) => void;
 }
 
-export function UserSidebar({ sortedUsers, room, user }: UserSidebarProps) {
+export function UserSidebar({ sortedUsers, room, user, setShowJoinModal }: UserSidebarProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
 
   return (
@@ -41,7 +42,7 @@ export function UserSidebar({ sortedUsers, room, user }: UserSidebarProps) {
             "flex items-center group/u rounded-2xl hover:bg-white/[0.03] border border-transparent hover:border-white/5 transition-all duration-300 relative",
             isCollapsed ? "justify-center p-2 mb-2" : "justify-between p-3"
           )}>
-            <div className={cn("flex items-center", isCollapsed ? "justify-center" : "gap-3")}>
+            <div className={cn("flex items-center gap-3", isCollapsed && "justify-center")}>
               <div 
                 title={isCollapsed ? u.name : undefined}
                 className={cn(
@@ -65,15 +66,26 @@ export function UserSidebar({ sortedUsers, room, user }: UserSidebarProps) {
               
               {!isCollapsed && (
                 <div className="flex flex-col min-w-0">
-                <span className={cn("text-sm font-bold truncate tracking-tight transition-colors", u.id === user?.uid ? "text-white" : "text-zinc-400 group-hover/u:text-zinc-200")}>
-                  {u.name} {u.id === user?.uid && "(YOU)"}
-                </span>
-                <div className="flex items-center gap-2">
-                   <span className="text-[9px] font-mono text-zinc-600">ID:{u.id.slice(0, 4)}</span>
-                   {u.id === room?.creatorId && (
-                     <span className="text-[8px] font-black uppercase tracking-widest text-amber-500 opacity-60">Host</span>
-                   )}
-                </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className={cn("text-sm font-bold truncate tracking-tight transition-colors", u.id === user?.uid ? "text-white" : "text-zinc-400 group-hover/u:text-zinc-200")}>
+                      {u.name} {u.id === user?.uid && "(YOU)"}
+                    </span>
+                    {u.id === user?.uid && (
+                      <button 
+                        onClick={() => setShowJoinModal(true)}
+                        className="opacity-0 group-hover/u:opacity-100 p-1 rounded-md hover:bg-white/10 text-zinc-500 hover:text-white transition-all"
+                        title="Edit Name/Emoji"
+                      >
+                        <Settings className="h-3 w-3" />
+                      </button>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[9px] font-mono text-zinc-600">ID:{u.id.slice(0, 4)}</span>
+                    {u.id === room?.creatorId && (
+                      <span className="text-[8px] font-black uppercase tracking-widest text-amber-500 opacity-60">Host</span>
+                    )}
+                  </div>
                 </div>
               )}
             </div>
