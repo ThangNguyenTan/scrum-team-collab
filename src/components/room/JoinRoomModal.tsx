@@ -1,21 +1,24 @@
 import { useRef } from "react";
 import EmojiPicker, { Theme } from "emoji-picker-react";
 import { cn } from "@/lib/utils";
+import { TEAM_GROUPS } from "@/constants";
 
 interface JoinRoomModalProps {
   avatar: string;
   defaultName?: string;
+  defaultGroup?: string;
   buttonText?: string;
   setAvatar: (avatar: string) => void;
   showEmojiPicker: boolean;
   setShowEmojiPicker: (show: boolean) => void;
-  handleJoin: (name: string) => void;
+  handleJoin: (name: string, group: string) => void;
   onClose?: () => void;
 }
 
 export function JoinRoomModal({ 
   avatar, 
   defaultName,
+  defaultGroup,
   buttonText = "Join Room",
   setAvatar, 
   showEmojiPicker, 
@@ -31,6 +34,8 @@ export function JoinRoomModal({
     }
   };
 
+  const isUpdate = buttonText === "Update Profile";
+
   return (
     <div 
       onClick={handleBackdropClick}
@@ -40,12 +45,13 @@ export function JoinRoomModal({
       )}
     >
       <div className="w-full max-w-sm rounded-[2rem] border border-white/10 bg-[#161618] p-8 shadow-2xl cursor-default">
-        <h2 className="text-2xl font-bold text-white mb-2">Joining Scrum Room</h2>
-        <p className="text-zinc-400 text-sm mb-6">Enter a display name to get started. No account needed.</p>
+        <h2 className="text-2xl font-bold text-white mb-1">{isUpdate ? "Update Profile" : "Joining Scrum Room"}</h2>
+        <p className="text-zinc-400 text-sm mb-6">{isUpdate ? "Modify your identity for this session." : "Enter your details to get started. No account needed."}</p>
         <form onSubmit={(e) => {
           e.preventDefault();
           const name = (e.currentTarget.elements.namedItem("name") as HTMLInputElement).value;
-          handleJoin(name);
+          const group = (e.currentTarget.elements.namedItem("group") as HTMLInputElement).value;
+          handleJoin(name, group);
         }} className="space-y-6">
           <div className="flex items-center gap-3 relative">
             <div className="relative" ref={emojiPickerRef}>
@@ -79,9 +85,42 @@ export function JoinRoomModal({
               required 
               autoFocus 
               defaultValue={defaultName}
-              placeholder="Ex: Sapphire Dev"
+              placeholder="Display Name"
               className="flex-1 h-14 rounded-xl bg-white/5 border border-white/10 px-4 text-white font-bold placeholder:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all"
             />
+          </div>
+
+          <div className="space-y-2">
+            <input 
+              name="group" 
+              type="text" 
+              list="groups-list"
+              defaultValue={defaultGroup}
+              placeholder="Team Group (FE, BE, QA...)"
+              maxLength={15}
+              className="w-full h-12 rounded-xl bg-white/5 border border-white/10 px-4 text-white font-medium placeholder:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all text-sm"
+            />
+            <datalist id="groups-list">
+              {TEAM_GROUPS.map(g => <option key={g} value={g} />)}
+            </datalist>
+            <div className="flex flex-wrap gap-2 mt-2">
+              {TEAM_GROUPS.map(g => (
+                <button
+                  key={g}
+                  type="button"
+                  onClick={(e) => {
+                    const input = (e.currentTarget.parentElement?.previousElementSibling?.previousElementSibling) as HTMLInputElement;
+                    if (input) {
+                      input.value = g;
+                      input.dispatchEvent(new Event('input', { bubbles: true }));
+                    }
+                  }}
+                  className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-xs text-zinc-500 hover:text-white hover:bg-white/10 hover:border-white/20 transition-all"
+                >
+                  {g}
+                </button>
+              ))}
+            </div>
           </div>
 
           <button 

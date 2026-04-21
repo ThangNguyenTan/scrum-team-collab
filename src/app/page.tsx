@@ -26,6 +26,7 @@ export default function Home() {
   const [creating, setCreating] = useState(false);
   const [name, setName] = useState("");
   const [avatar, setAvatar] = useState(EMOJIS[0]);
+  const [group, setGroup] = useState("");
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const emojiPickerRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
@@ -82,6 +83,9 @@ export default function Home() {
       setAvatar(EMOJIS[Math.floor(Math.random() * EMOJIS.length)]);
     }
 
+    const savedGroup = localStorage.getItem("scrum_user_group");
+    if (savedGroup) setGroup(savedGroup);
+
     return () => unsubscribe();
   }, []);
 
@@ -92,6 +96,7 @@ export default function Home() {
     setCreating(true);
     localStorage.setItem("scrum_user_name", name);
     localStorage.setItem("scrum_user_avatar", avatar);
+    localStorage.setItem("scrum_user_group", group);
     
     try {
       let currentUser = auth.currentUser;
@@ -206,6 +211,17 @@ export default function Home() {
                       <span className="text-[9px] font-mono text-indigo-400">READY__</span>
                     </div>
                   </div>
+                </div>
+
+                <div className="relative group/group-input">
+                   <input 
+                    type="text"
+                    placeholder="Team Group (Ex: FE, BE, QA...)"
+                    value={group}
+                    onChange={(e) => setGroup(e.target.value)}
+                    maxLength={15}
+                    className="w-full rounded-2xl bg-zinc-900 border border-white/5 px-4 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm font-medium text-zinc-300 placeholder:text-zinc-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 transition-all duration-300"
+                  />
                 </div>
                 
                 <button 

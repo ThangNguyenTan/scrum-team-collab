@@ -5,6 +5,8 @@ export const EMOJIS = [
   "💎", "🌈", "☀️", "🌙", "⭐", "🦾", "🎨", "🎭", "🎮", "🎸"
 ];
 
+export const TEAM_GROUPS = ["FE", "BE", "QA", "BA", "PM"];
+
 export const PLANNING_CARDS = ["0", "1", "2", "3", "5", "8", "13", "21", "34", "55", "89", "?", "☕"];
 
 export const FEATURES = [

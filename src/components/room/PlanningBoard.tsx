@@ -29,6 +29,32 @@ export function PlanningBoard({ room, roomId, users, isAdmin, currentUserId }: P
   
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(true);
+  const [activeGroup, setActiveGroup] = useState<string | null>(null);
+
+  const groupColors: Record<string, string> = {
+    "FE": "border-blue-500/40 bg-blue-500/5 text-blue-400",
+    "BE": "border-emerald-500/40 bg-emerald-500/5 text-emerald-400",
+    "QA": "border-rose-500/40 bg-rose-500/5 text-rose-400",
+    "BA": "border-amber-500/40 bg-amber-500/5 text-amber-400",
+    "PM": "border-purple-500/40 bg-purple-500/5 text-purple-400",
+  };
+
+  const getGroupStyles = (group?: string) => {
+    if (!group) return "border-white/5 bg-white/[0.02] text-zinc-500";
+    const normalized = group.toUpperCase();
+    return groupColors[normalized] || "border-indigo-500/40 bg-indigo-500/5 text-indigo-400";
+  };
+
+  const groups = useMemo(() => {
+    const g = new Set<string>();
+    users.forEach(u => { if (u.group) g.add(u.group); });
+    return Array.from(g).sort();
+  }, [users]);
+
+  const filteredUsers = useMemo(() => {
+    if (!activeGroup) return users;
+    return users.filter(u => u.group === activeGroup);
+  }, [users, activeGroup]);
 
   const updateScrollButtons = () => {
     if (!scrollRef.current) return;
@@ -107,7 +133,7 @@ export function PlanningBoard({ room, roomId, users, isAdmin, currentUserId }: P
 
   const stats = useMemo(() => {
     if (!room.revealed) return null;
-    const votes = users
+    const votes = filteredUsers
       .map((u) => parseFloat(u.vote || ""))
       .filter((v) => !isNaN(v));
       
@@ -123,7 +149,7 @@ export function PlanningBoard({ room, roomId, users, isAdmin, currentUserId }: P
       max: Math.max(...votes),
       proposal: proposal.toString()
     };
-  }, [users, room.revealed]);
+  }, [filteredUsers, room.revealed]);
 
   const renderCard = (card: string) => (
     <button
@@ -169,7 +195,7 @@ export function PlanningBoard({ room, roomId, users, isAdmin, currentUserId }: P
           <h2 className="text-lg md:text-xl xl:text-3xl font-black flex items-center gap-2 md:gap-4 text-white tracking-tight shrink-0 whitespace-nowrap">
             Sprint Planning
             {stats !== null && (
-              <div className="flex gap-2 -sm md:gap-3 items-center ml-2">
+              <div className="flex gap-3 items-center ml-2">
                 <span className="flex items-center gap-1 xl:gap-2 text-indigo-400 bg-indigo-500/10 px-2 lg:px-3 xl:px-4 py-1 xl:py-1.5 rounded-lg xl:rounded-xl text-xs md:text-sm xl:text-lg border border-indigo-500/20 shadow-lg shadow-indigo-500/10">
                   Avg: <span className="font-bold text-white">{stats.avg}</span>
                 </span>
@@ -183,29 +209,46 @@ export function PlanningBoard({ room, roomId, users, isAdmin, currentUserId }: P
                 <div className="h-4 xl:h-6 w-px bg-white/10 mx-1"></div>
                 
                 {/* Proposed Final Estimate */}
-                  <span className="flex items-center gap-2 text-emerald-400 bg-emerald-500/10 px-3 xl:px-5 py-1 xl:py-1.5 rounded-lg xl:rounded-xl text-sm xl:text-lg border border-emerald-500/30 shadow-[0_0_30px_rgba(52,211,153,0.15)] relative overflow-hidden group">
-                    <div className="absolute inset-x-0 top-0 h-[1px] bg-emerald-400/50"></div>
-                    <Sparkles className="h-3.5 w-3.5 relative z-10 animate-pulse" />
-                    <span className="relative z-10 tracking-[0.2em] uppercase text-[8px] xl:text-[9px] font-black pt-1 hidden md:inline-block">PROPOSED:</span>
-                    <span className="relative z-10 font-black text-white text-lg xl:text-2xl tabular-nums">{stats.proposal}</span>
-                  </span>
-                </div>
-              )}
-            </h2>
-            <div className="flex items-center gap-4 sm:gap-6 mt-2 xl:mt-0">
-              <div className="flex items-center gap-2 shrink-0">
-                <span className="h-1.5 w-1.5 rounded-full bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.5)]"></span>
-                <p className="text-zinc-500 text-[9px] md:text-[10px] uppercase tracking-[0.2em] font-black font-mono">
-                  {users.filter((u) => u.vote).length} / {users.length} READY
-                </p>
-              </div>
-              {allVoted && !room.revealed && (
-                <span className="text-[8px] md:text-[10px] shrink-0 font-black uppercase tracking-[0.2em] text-emerald-400 bg-emerald-500/10 px-2 md:px-3 py-1 rounded-full border border-emerald-500/20 animate-pulse">
-                  SCAN COMPLETED
+                <span className="flex items-center gap-2 text-emerald-400 bg-emerald-500/10 px-3 xl:px-5 py-1 xl:py-1.5 rounded-lg xl:rounded-xl text-sm xl:text-lg border border-emerald-500/30 shadow-[0_0_30px_rgba(52,211,153,0.15)] relative overflow-hidden group">
+                  <div className="absolute inset-x-0 top-0 h-[1px] bg-emerald-400/50"></div>
+                  <Sparkles className="h-3.5 w-3.5 relative z-10 animate-pulse" />
+                  <span className="relative z-10 tracking-[0.2em] uppercase text-[8px] xl:text-[9px] font-black pt-1 hidden md:inline-block">PROPOSED:</span>
+                  <span className="relative z-10 font-black text-white text-lg xl:text-2xl tabular-nums">{stats.proposal}</span>
                 </span>
+              </div>
+            )}
+          </h2>
+        </div>
+
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 custom-scrollbar no-scrollbar scroll-smooth">
+            <button
+              onClick={() => setActiveGroup(null)}
+              className={cn(
+                "px-4 py-2 rounded-xl text-[11px] font-bold uppercase tracking-widest transition-all shrink-0 whitespace-nowrap border",
+                !activeGroup 
+                  ? "bg-white text-black border-white shadow-lg" 
+                  : "bg-white/5 text-zinc-500 border-white/5 hover:bg-white/10"
               )}
-            </div>
+            >
+              All Squads
+            </button>
+            {groups.map(g => (
+              <button
+                key={g}
+                onClick={() => setActiveGroup(g === activeGroup ? null : g)}
+                className={cn(
+                  "px-4 py-2 rounded-xl text-[11px] font-bold uppercase tracking-widest transition-all shrink-0 whitespace-nowrap border",
+                  activeGroup === g 
+                    ? "bg-indigo-500 text-white border-indigo-400 shadow-lg shadow-indigo-500/20" 
+                    : "bg-white/5 text-zinc-500 border-white/5 hover:bg-white/10"
+                )}
+              >
+                {g}
+              </button>
+            ))}
           </div>
+        </div>
         
         {isAdmin && (
           <div className="flex items-center justify-center sm:justify-start w-full md:w-auto gap-2 sm:gap-3 shrink-0 border-t border-white/5 pt-4 md:pt-0 md:border-none mt-2 md:mt-0">
@@ -235,25 +278,39 @@ export function PlanningBoard({ room, roomId, users, isAdmin, currentUserId }: P
       </div>
 
       <div className="flex-grow flex-shrink-0 min-h-[350px] bg-black/20 rounded-2xl xl:rounded-[3rem] p-1 xl:p-2 border border-white/[0.02] flex flex-col">
-          <div className="flex-1 overflow-y-auto custom-scrollbar p-2 sm:p-4 xl:p-6">
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 2xl:grid-cols-6 gap-2 sm:gap-3 xl:gap-6">
-              {users.map((u) => (
-                <div 
-                  key={u.id}
-                  className={cn(
-                    "flex flex-col items-center justify-center p-2 sm:p-4 xl:p-8 rounded-xl xl:rounded-[2.5rem] border transition-all duration-700",
-                    room.revealed && u.vote 
-                      ? "bg-indigo-500/5 border-indigo-500/40 shadow-[0_0_40px_rgba(99,102,241,0.1)] scale-105" 
-                      : "bg-white/[0.02] border-white/5"
+        <div className="flex-1 overflow-y-auto custom-scrollbar p-2 sm:p-4 xl:p-6">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 2xl:grid-cols-6 gap-2 sm:gap-3 xl:gap-6">
+            {filteredUsers.map((u) => (
+              <div 
+                key={u.id}
+                className={cn(
+                  "flex flex-col items-center justify-center p-2 sm:p-4 xl:p-8 rounded-xl xl:rounded-[2.5rem] border transition-all duration-700 relative group/member",
+                  getGroupStyles(u.group).split(' ')[0], 
+                  getGroupStyles(u.group).split(' ')[1],
+                  room.revealed && u.vote && "shadow-[0_0_40px_rgba(99,102,241,0.1)] scale-105"
+                )}
+              >
+                  {u.group && (
+                    <div className={cn(
+                      "absolute top-4 left-4 px-2 py-0.5 rounded-md border text-[8px] font-black uppercase tracking-tighter transition-all group-hover/member:opacity-100",
+                      getGroupStyles(u.group)
+                    )}>
+                      {u.group}
+                    </div>
                   )}
-                >
                   <div className={cn(
                     "h-20 w-14 sm:h-24 sm:w-16 md:h-28 md:w-20 lg:h-32 lg:w-24 xl:h-36 xl:w-28 rounded-lg md:rounded-2xl flex items-center justify-center transition-all duration-1000 perspective-1000 group/card cursor-pointer mb-2 xl:mb-8",
                     room.revealed ? "rotate-0 scale-110" : u.vote ? "rotate-y-180" : "opacity-10 scale-90"
                   )}>
                       {room.revealed ? (
-                        <div className="h-full w-full rounded-lg md:rounded-2xl bg-white text-black flex flex-col items-center justify-center shadow-[0_25px_50px_rgba(0,0,0,0.5)] relative overflow-hidden ring-1 ring-white/20">
-                          <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/10 to-transparent"></div>
+                        <div className={cn(
+                          "h-full w-full rounded-lg md:rounded-2xl bg-white text-black flex flex-col items-center justify-center shadow-[0_25px_50px_rgba(0,0,0,0.5)] relative overflow-hidden ring-2",
+                          u.group ? getGroupStyles(u.group).split(' ')[0].replace('border-', 'ring-') : "ring-white/20"
+                        )}>
+                          <div className={cn(
+                            "absolute inset-0 bg-gradient-to-br from-transparent to-transparent",
+                            u.group && getGroupStyles(u.group).split(' ')[1].replace('bg-', 'from-').replace('/5', '/20')
+                          )}></div>
                           <div className="absolute top-1 left-1 lg:top-3 lg:left-3 text-[6px] md:text-[8px] opacity-30 font-black tracking-tighter uppercase">ESTM</div>
                           <div className="absolute bottom-1 right-1 lg:bottom-3 lg:right-3 text-[6px] md:text-[8px] opacity-30 font-black tracking-tighter self-end rotate-180 uppercase">ESTM</div>
                           <span className="text-3xl md:text-5xl xl:text-7xl font-black tracking-tighter mt-1">{u.vote === "☕" ? <Coffee className="h-6 w-6 lg:h-12 lg:w-12" /> : (u.vote || "-")}</span>

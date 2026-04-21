@@ -39,6 +39,7 @@ export default function RoomPage() {
   const [user, setUser] = useState<User | null>(null);
   const [displayName, setDisplayName] = useState<string>("");
   const [avatar, setAvatar] = useState<string>("");
+  const [userGroup, setUserGroup] = useState<string>("");
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [showJoinModal, setShowJoinModal] = useState(false);
   
@@ -51,51 +52,67 @@ export default function RoomPage() {
   const [loading, setLoading] = useState(true);
   const [idCopyFeedback, setIdCopyFeedback] = useState(false);
   const [inviteFeedback, setInviteFeedback] = useState(false);
+  const [userHasJoined, setUserHasJoined] = useState(false);
 
   const isAdmin = useMemo(() => user?.uid === room?.creatorId, [user, room]);
 
   // --- Auth & Session ---
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (u) => {
-      setUser(u);
-      
-      const globalName = localStorage.getItem("scrum_user_name");
-      const roomSpecificName = localStorage.getItem(`scrum_name_${roomId}`);
-      const savedName = roomSpecificName || globalName;
-      
-      const globalAvatar = localStorage.getItem("scrum_user_avatar");
-      const roomSpecificAvatar = localStorage.getItem(`scrum_avatar_${roomId}`);
-      const savedAvatar = roomSpecificAvatar || globalAvatar;
-
-      const defaultEmoji = EMOJIS[Math.floor(Math.random() * EMOJIS.length)];
-      if (savedName) setDisplayName(savedName);
-      if (savedAvatar) setAvatar(savedAvatar);
-      else if (!avatar) setAvatar(defaultEmoji);
-
-      if (!u) {
-        await signInAnonymously(auth);
-      }
-      
-      const sessionJoined = sessionStorage.getItem(`scrum_joined_${roomId}`);
-      const isCreator = localStorage.getItem(`scrum_is_creator_${roomId}`) === "true";
-      
-      if (!sessionJoined && !isCreator) {
-        setShowJoinModal(true);
-      } else if (u && savedName) {
-        // If already joined in session or is creator, sync with Firestore
-        await setDoc(doc(db, "rooms", roomId, "users", u.uid), {
-          name: savedName,
-          avatar: savedAvatar || defaultEmoji,
-          lastSeen: serverTimestamp(),
-          joinedAt: serverTimestamp(),
-        }, { merge: true });
+    const unsubscribe = onAuthStateChanged(auth, (u) => {
+      const syncAuth = async () => {
+        setUser(u);
         
-        if (isCreator) {
-           sessionStorage.setItem(`scrum_joined_${roomId}`, "true");
-        }
-      }
+        const globalName = localStorage.getItem("scrum_user_name");
+        const roomSpecificName = localStorage.getItem(`scrum_name_${roomId}`);
+        const savedName = roomSpecificName || globalName;
+        
+        const globalAvatar = localStorage.getItem("scrum_user_avatar");
+        const roomSpecificAvatar = localStorage.getItem(`scrum_avatar_${roomId}`);
+        const savedAvatar = roomSpecificAvatar || globalAvatar;
 
-      setLoading(false);
+        const globalGroup = localStorage.getItem("scrum_user_group");
+        const roomSpecificGroup = localStorage.getItem(`scrum_group_${roomId}`);
+        const savedGroup = roomSpecificGroup || globalGroup;
+
+        const defaultEmoji = EMOJIS[Math.floor(Math.random() * EMOJIS.length)];
+        if (savedName) setDisplayName(savedName);
+        if (savedAvatar) setAvatar(savedAvatar);
+        else if (!avatar) setAvatar(defaultEmoji);
+        if (savedGroup) setUserGroup(savedGroup);
+
+        const isCreator = localStorage.getItem(`scrum_is_creator_${roomId}`) === "true";
+        const sessionJoined = sessionStorage.getItem(`scrum_joined_${roomId}`);
+        
+        if (!u) {
+          await signInAnonymously(auth);
+        }
+        
+        if ((!sessionJoined && !isCreator) || !savedGroup) {
+          setShowJoinModal(true);
+        } else {
+          setUserHasJoined(true);
+        }
+
+        if (u && savedName) {
+          // If already joined in session or is creator, sync with Firestore
+          await setDoc(doc(db, "rooms", roomId, "users", u.uid), {
+            name: savedName,
+            avatar: savedAvatar || defaultEmoji,
+            group: savedGroup || "",
+            lastSeen: serverTimestamp(),
+            joinedAt: serverTimestamp(),
+          }, { merge: true });
+          
+          if (isCreator) {
+            sessionStorage.setItem(`scrum_joined_${roomId}`, "true");
+            setUserHasJoined(true);
+          }
+        }
+
+        setLoading(false);
+      };
+
+      syncAuth();
     });
     return () => unsubscribe();
   }, [roomId, router]);
@@ -152,15 +169,18 @@ export default function RoomPage() {
           const sessionJoined = sessionStorage.getItem(`scrum_joined_${roomId}`);
           if (!sessionJoined) {
             sessionStorage.setItem(`scrum_joined_${roomId}`, "true");
+            setUserHasJoined(true);
             setShowJoinModal(false);
             
             // Sync creator presence to Firestore immediately if not already there
             const creatorAvatar = avatar || localStorage.getItem("scrum_user_avatar") || EMOJIS[0];
             const creatorName = roomData.creatorName || displayName || localStorage.getItem("scrum_user_name") || "Creator";
+            const creatorGroup = userGroup || localStorage.getItem("scrum_user_group") || "";
 
             setDoc(doc(db, "rooms", roomId, "users", user.uid), {
               name: creatorName,
               avatar: creatorAvatar,
+              group: creatorGroup,
               lastSeen: serverTimestamp(),
               joinedAt: serverTimestamp(),
             }, { merge: true });
@@ -214,15 +234,19 @@ export default function RoomPage() {
     });
   }, [users, room]);
 
-  const handleJoin = async (name: string) => {
+  const handleJoin = async (name: string, group: string) => {
     if (!name.trim()) return;
     
     setDisplayName(name);
+    setUserGroup(group);
     localStorage.setItem(`scrum_name_${roomId}`, name);
     localStorage.setItem("scrum_user_name", name);
     localStorage.setItem(`scrum_avatar_${roomId}`, avatar);
     localStorage.setItem("scrum_user_avatar", avatar);
+    localStorage.setItem(`scrum_group_${roomId}`, group);
+    localStorage.setItem("scrum_user_group", group);
     sessionStorage.setItem(`scrum_joined_${roomId}`, "true");
+    setUserHasJoined(true);
     setShowJoinModal(false);
 
     let uid = user?.uid;
@@ -234,6 +258,7 @@ export default function RoomPage() {
     await setDoc(doc(db, "rooms", roomId, "users", uid), {
       name,
       avatar,
+      group,
       vote: null,
       joinedAt: serverTimestamp(),
     });
@@ -319,12 +344,13 @@ export default function RoomPage() {
         <JoinRoomModal 
           avatar={avatar}
           defaultName={displayName}
-          buttonText={sessionStorage.getItem(`scrum_joined_${roomId}`) ? "Update Profile" : "Join Room"}
+          defaultGroup={userGroup}
+          buttonText={userHasJoined ? "Update Profile" : "Join Room"}
           setAvatar={setAvatar}
           showEmojiPicker={showEmojiPicker}
           setShowEmojiPicker={setShowEmojiPicker}
           handleJoin={handleJoin}
-          onClose={sessionStorage.getItem(`scrum_joined_${roomId}`) ? () => setShowJoinModal(false) : undefined}
+          onClose={userHasJoined ? () => setShowJoinModal(false) : undefined}
         />
       )}
     </div>

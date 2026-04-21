@@ -12,6 +12,7 @@ export interface RoomUser {
   id: string;
   name: string;
   avatar?: string;
+  group?: string;
   vote: string | null;
   lastSeen: any;
   joinedAt: any;

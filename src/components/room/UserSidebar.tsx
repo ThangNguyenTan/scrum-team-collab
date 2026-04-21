@@ -82,8 +82,16 @@ export function UserSidebar({ sortedUsers, room, user, setShowJoinModal }: UserS
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="text-[9px] font-mono text-zinc-600">ID:{u.id.slice(0, 4)}</span>
+                    {u.group && (
+                      <span className="text-[8px] font-bold px-1.5 py-0.5 rounded bg-white/5 border border-white/5 text-zinc-500 uppercase tracking-tighter">
+                        {u.group}
+                      </span>
+                    )}
                     {u.id === room?.creatorId && (
-                      <span className="text-[8px] font-black uppercase tracking-widest text-amber-500 opacity-60">Host</span>
+                      <span className="text-[8px] font-black uppercase tracking-widest text-amber-500 opacity-60 flex items-center gap-0.5">
+                        <Crown className="h-2 w-2" />
+                        Host
+                      </span>
                     )}
                   </div>
                 </div>
