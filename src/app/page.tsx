@@ -16,7 +16,7 @@ import { auth, db } from "@/lib/firebase";
 import { Zap, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import EmojiPicker, { Theme } from "emoji-picker-react";
-import { EMOJIS, FEATURES } from "@/constants";
+import { EMOJIS, FEATURES, TEAM_GROUPS } from "@/constants";
 import { LandingNavbar } from "@/components/landing/LandingNavbar";
 import { FeatureCard } from "@/components/landing/FeatureCard";
 
@@ -214,7 +214,7 @@ export default function Home() {
                 </div>
 
                 <div className="relative group/group-input">
-                   <input 
+                  <input 
                     type="text"
                     placeholder="Team Group (Ex: FE, BE, QA...)"
                     value={group}
@@ -222,6 +222,23 @@ export default function Home() {
                     maxLength={15}
                     className="w-full rounded-2xl bg-zinc-900 border border-white/5 px-4 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm font-medium text-zinc-300 placeholder:text-zinc-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 transition-all duration-300"
                   />
+                  <div className="grid grid-cols-5 gap-2 mt-3">
+                    {TEAM_GROUPS.map(g => (
+                      <button
+                        key={`home-group-${g}`}
+                        type="button"
+                        onClick={() => setGroup(g)}
+                        className={cn(
+                          "h-10 rounded-xl border text-[10px] font-bold uppercase tracking-wider transition-all flex items-center justify-center",
+                          group === g 
+                            ? "bg-indigo-500/20 border-indigo-500/50 text-indigo-400" 
+                            : "bg-white/5 border-white/10 text-zinc-500 hover:text-white hover:bg-white/10 hover:border-white/20"
+                        )}
+                      >
+                        {g}
+                      </button>
+                    ))}
+                  </div>
                 </div>
                 
                 <button 

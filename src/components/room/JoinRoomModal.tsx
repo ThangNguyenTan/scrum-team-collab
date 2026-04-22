@@ -1,4 +1,6 @@
-import { useRef } from "react";
+"use client";
+
+import { useRef, useState } from "react";
 import EmojiPicker, { Theme } from "emoji-picker-react";
 import { cn } from "@/lib/utils";
 import { TEAM_GROUPS } from "@/constants";
@@ -26,6 +28,8 @@ export function JoinRoomModal({
   handleJoin,
   onClose
 }: JoinRoomModalProps) {
+  const [name, setName] = useState(defaultName || "");
+  const [group, setGroup] = useState(defaultGroup || "");
   const emojiPickerRef = useRef<HTMLDivElement>(null);
 
   const handleBackdropClick = (e: React.MouseEvent) => {
@@ -49,8 +53,6 @@ export function JoinRoomModal({
         <p className="text-zinc-400 text-sm mb-6">{isUpdate ? "Modify your identity for this session." : "Enter your details to get started. No account needed."}</p>
         <form onSubmit={(e) => {
           e.preventDefault();
-          const name = (e.currentTarget.elements.namedItem("name") as HTMLInputElement).value;
-          const group = (e.currentTarget.elements.namedItem("group") as HTMLInputElement).value;
           handleJoin(name, group);
         }} className="space-y-6">
           <div className="flex items-center gap-3 relative">
@@ -84,7 +86,8 @@ export function JoinRoomModal({
               type="text" 
               required 
               autoFocus 
-              defaultValue={defaultName}
+              value={name}
+              onChange={(e) => setName(e.target.value)}
               placeholder="Display Name"
               className="flex-1 h-14 rounded-xl bg-white/5 border border-white/10 px-4 text-white font-bold placeholder:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all"
             />
@@ -94,28 +97,24 @@ export function JoinRoomModal({
             <input 
               name="group" 
               type="text" 
-              list="groups-list"
-              defaultValue={defaultGroup}
+              value={group}
+              onChange={(e) => setGroup(e.target.value)}
               placeholder="Team Group (FE, BE, QA...)"
               maxLength={15}
               className="w-full h-12 rounded-xl bg-white/5 border border-white/10 px-4 text-white font-medium placeholder:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all text-sm"
             />
-            <datalist id="groups-list">
-              {TEAM_GROUPS.map(g => <option key={g} value={g} />)}
-            </datalist>
-            <div className="flex flex-wrap gap-2 mt-2">
+            <div className="grid grid-cols-5 gap-2 mt-3">
               {TEAM_GROUPS.map(g => (
                 <button
-                  key={g}
+                  key={`modal-group-${g}`}
                   type="button"
-                  onClick={(e) => {
-                    const input = (e.currentTarget.parentElement?.previousElementSibling?.previousElementSibling) as HTMLInputElement;
-                    if (input) {
-                      input.value = g;
-                      input.dispatchEvent(new Event('input', { bubbles: true }));
-                    }
-                  }}
-                  className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-xs text-zinc-500 hover:text-white hover:bg-white/10 hover:border-white/20 transition-all"
+                  onClick={() => setGroup(g)}
+                  className={cn(
+                    "h-10 rounded-xl border text-[10px] font-bold uppercase tracking-wider transition-all flex items-center justify-center",
+                    group === g 
+                      ? "bg-indigo-500/20 border-indigo-500/50 text-indigo-400" 
+                      : "bg-white/5 border-white/10 text-zinc-500 hover:text-white hover:bg-white/10 hover:border-white/20"
+                  )}
                 >
                   {g}
                 </button>
