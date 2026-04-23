@@ -11,12 +11,12 @@ interface UserSidebarProps {
 }
 
 export function UserSidebar({ sortedUsers, room, user, setShowJoinModal }: UserSidebarProps) {
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(true);
 
   return (
     <aside className={cn(
       "border-r border-white/5 bg-[#050505]/40 flex flex-col hidden lg:flex shrink-0 transition-all duration-300 relative",
-      isCollapsed ? "w-20" : "w-80"
+      isCollapsed ? "w-20" : "w-64 xl:w-72"
     )}>
       {/* Toggle Button */}
       <button 

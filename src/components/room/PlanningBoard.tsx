@@ -1,10 +1,11 @@
 import { useMemo, useRef, useState, useEffect } from "react";
-import { doc, updateDoc, setDoc } from "firebase/firestore";
+import { doc, updateDoc, setDoc, writeBatch, collection, query, orderBy, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { Coffee, Zap, RefreshCw, EyeOff, Eye, CheckCircle2, Sparkles, ChevronLeft, ChevronRight, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { RoomData, RoomUser } from "@/types";
 import { PLANNING_CARDS, ANIMAL_MAPPING } from "@/constants";
+import { TicketSidebar } from "./TicketSidebar";
 
 interface PlanningBoardProps {
   room: RoomData;
@@ -121,11 +122,77 @@ export function PlanningBoard({ room, roomId, users, isAdmin, currentUserId }: P
     await updateDoc(doc(db, "rooms", roomId), { revealed: !room.revealed });
   }
 
+  const handleSaveAndNext = async () => {
+    if (!isAdmin) return;
+    
+    const batch = writeBatch(db);
+
+    // Save to active ticket if we have one and a proposal
+    if (room.activeTicketId && stats && room.revealed) {
+      const votedUsers = users.filter(u => u.vote).length;
+      batch.update(doc(db, "rooms", roomId, "tickets", room.activeTicketId), {
+        status: "completed",
+        estimate: stats.proposal,
+        votesAtCompletion: votedUsers,
+        totalUsersAtCompletion: users.length
+      });
+    }
+
+    // Fetch tickets to find the next one in line
+    const ticketsSnap = await getDocs(collection(db, "rooms", roomId, "tickets"));
+    const allTickets = ticketsSnap.docs.map(d => ({ id: d.id, ...d.data() as any }));
+    
+    // Stably sort exactly like the UI to find the precise "next" ticket
+    allTickets.sort((a, b) => {
+      const aOrder = typeof a.order === 'number' ? a.order : (a.createdAt?.toMillis?.() || 0);
+      const bOrder = typeof b.order === 'number' ? b.order : (b.createdAt?.toMillis?.() || 0);
+      return bOrder - aOrder;
+    });
+    
+    let nextTicket = null;
+    
+    if (room.activeTicketId) {
+      const currentIndex = allTickets.findIndex(t => t.id === room.activeTicketId);
+      if (currentIndex !== -1) {
+        // Look ahead for the very next "todo" ticket
+        for (let i = currentIndex + 1; i < allTickets.length; i++) {
+          if (allTickets[i].status === "todo" || allTickets[i].status === "open" || !allTickets[i].status) {
+            nextTicket = allTickets[i];
+            break;
+          }
+        }
+      }
+    }
+
+    // Fallback: If no strict next ticket was found after the current one, just grab the first available "todo" ticket
+    if (!nextTicket) {
+      nextTicket = allTickets.find(t => t.status === "todo" || t.status === "open" || !t.status);
+    }
+
+    if (nextTicket) {
+      // Put next ticket into planning tracking
+      batch.update(doc(db, "rooms", roomId, "tickets", nextTicket.id), { status: "planning" });
+      batch.update(doc(db, "rooms", roomId), {
+        revealed: false,
+        currentTicket: nextTicket.name,
+        activeTicketId: nextTicket.id
+      });
+    } else {
+      // Reset board completely if fully done with all tickets
+      batch.update(doc(db, "rooms", roomId), { revealed: false, currentTicket: "", activeTicketId: null });
+    }
+
+    // Clear all users' votes
+    for (const u of users) {
+      batch.update(doc(db, "rooms", roomId, "users", u.id), { vote: null });
+    }
+
+    await batch.commit();
+  }
+
   const handleClear = async () => {
     if (!isAdmin) return;
-    // Clear the room reveal
     await updateDoc(doc(db, "rooms", roomId), { revealed: false });
-    // Clear all user votes
     for (const u of users) {
       await updateDoc(doc(db, "rooms", roomId, "users", u.id), { vote: null });
     }
@@ -160,18 +227,18 @@ export function PlanningBoard({ room, roomId, users, isAdmin, currentUserId }: P
         onClick={() => handleVote(card)}
         disabled={room.revealed}
         className={cn(
-          "flex flex-col items-center justify-center h-20 w-14 sm:h-24 sm:w-16 md:h-28 md:w-20 lg:h-32 lg:w-24 xl:h-44 xl:w-32 rounded-2xl lg:rounded-3xl border-3 transition-all group relative",
+          "flex flex-col items-center justify-center h-16 w-12 sm:h-20 sm:w-14 lg:h-24 lg:w-16 xl:h-32 xl:w-24 rounded-xl lg:rounded-2xl transition-all group relative",
           myVote === card 
-            ? "bg-indigo-500 border-indigo-400 scale-110 shadow-[0_20px_60px_rgba(99,102,241,0.4)] z-20" 
-            : "bg-black/60 border-white/10",
+            ? "bg-indigo-500 border-[3px] border-indigo-400 scale-110 shadow-[0_20px_60px_rgba(99,102,241,0.4)] z-20" 
+            : "bg-black/60 border border-white/10",
           !room.revealed && myVote !== card && "hover:border-white/40 hover:bg-white/10 hover:-translate-y-3 active:scale-95",
           room.revealed && myVote !== card && "opacity-20 cursor-not-allowed",
           room.revealed && myVote === card && "cursor-not-allowed"
         )}
       >
-        {/* Animal Backdrop Wrapper with Overflow Hidden */}
+        {/* Animal Backdrop Wrapper with Overflow Hidden and Safari Webkit fix */}
         {animal && (
-          <div className="absolute inset-0 z-0 overflow-hidden rounded-[calc(1.5rem-3px)] lg:rounded-[calc(2.25rem-3px)]">
+          <div className="absolute inset-x-0 inset-y-0 z-0 overflow-hidden rounded-[inherit] [transform:translateZ(0)] border-[0.5px] border-transparent">
             <img 
               src={animal.image} 
               alt={animal.name}
@@ -192,8 +259,8 @@ export function PlanningBoard({ room, roomId, users, isAdmin, currentUserId }: P
         
         <div className="relative z-10 flex flex-col items-center">
           <span className={cn(
-            "text-xl sm:text-2xl md:text-3xl xl:text-5xl font-black transition-transform group-hover:scale-125 duration-500 drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]",
-            card === "☕" ? "text-2xl sm:text-2xl md:text-3xl xl:text-5xl" : "",
+            "text-lg sm:text-xl lg:text-3xl xl:text-4xl font-black transition-transform group-hover:scale-125 duration-500 drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]",
+            card === "☕" ? "text-xl sm:text-2xl lg:text-3xl xl:text-4xl" : "",
             "text-white"
           )}>
             {card}
@@ -220,28 +287,31 @@ export function PlanningBoard({ room, roomId, users, isAdmin, currentUserId }: P
   };
 
   return (
-    <div className="flex flex-col h-full gap-3 md:gap-4 xl:gap-6 p-3 md:p-4 lg:p-6 xl:p-8 overflow-y-auto overflow-x-hidden pb-12 lg:pb-8">
+    <div className="flex h-full w-full overflow-hidden">
+      <div className="flex-1 flex flex-col h-full gap-3 md:gap-4 xl:gap-6 p-3 md:p-4 lg:p-6 xl:p-8 overflow-y-auto overflow-x-hidden pb-12 lg:pb-8">
       {/* 1. Header Controls for Planning */}
       <div className="shrink-0 flex flex-col xl:flex-row lg:items-center justify-between gap-4 bg-white/[0.03] border border-white/5 p-3 md:p-4 xl:p-6 rounded-2xl xl:rounded-[2rem] shadow-xl">
-        <div className="flex flex-col gap-2 md:gap-1 overflow-x-auto w-full custom-scrollbar pb-2 xl:pb-0">
-          <h2 className="text-lg md:text-xl xl:text-3xl font-black flex items-center gap-2 md:gap-4 text-white tracking-tight shrink-0 whitespace-nowrap">
-            Sprint Planning
-            {stats !== null && (
-              <div className="flex gap-3 items-center ml-2">
-                <span className="flex items-center gap-1 xl:gap-2 text-indigo-400 bg-indigo-500/10 px-2 lg:px-3 xl:px-4 py-1 xl:py-1.5 rounded-lg xl:rounded-xl text-xs md:text-sm xl:text-lg border border-indigo-500/20 shadow-lg shadow-indigo-500/10">
+        <div className="flex flex-col gap-2 md:gap-1 w-full pb-2 xl:pb-0">
+          <div className="flex flex-row flex-wrap items-center gap-2 md:gap-4 shrink-0">
+             <h2 className="text-lg md:text-xl xl:text-3xl font-black text-white tracking-tight shrink-0 whitespace-nowrap">
+               Sprint Planning
+             </h2>
+             {stats !== null && (
+               <div className="flex flex-wrap gap-2 xl:gap-3 items-center ml-0 md:ml-2">
+                <span className="flex items-center gap-1 xl:gap-2 text-indigo-400 bg-indigo-500/10 px-2 lg:px-3 xl:px-4 py-1 xl:py-1.5 rounded-lg xl:rounded-xl text-xs md:text-sm xl:text-lg border border-indigo-500/20 shadow-lg shadow-indigo-500/10 shrink-0">
                   Avg: <span className="font-bold text-white">{stats.avg}</span>
                 </span>
-                <span className="flex items-center gap-1 xl:gap-2 text-sky-400 bg-sky-500/10 px-2 lg:px-3 xl:px-4 py-1 xl:py-1.5 rounded-lg xl:rounded-xl text-xs md:text-sm xl:text-lg border border-sky-500/20 shadow-lg shadow-sky-500/10">
+                <span className="flex items-center gap-1 xl:gap-2 text-sky-400 bg-sky-500/10 px-2 lg:px-3 xl:px-4 py-1 xl:py-1.5 rounded-lg xl:rounded-xl text-xs md:text-sm xl:text-lg border border-sky-500/20 shadow-lg shadow-sky-500/10 shrink-0">
                   Min: <span className="font-bold text-white">{stats.min}</span>
                 </span>
-                <span className="flex items-center gap-1 xl:gap-2 text-rose-400 bg-rose-500/10 px-2 lg:px-3 xl:px-4 py-1 xl:py-1.5 rounded-lg xl:rounded-xl text-xs md:text-sm xl:text-lg border border-rose-500/20 shadow-lg shadow-rose-500/10">
+                <span className="flex items-center gap-1 xl:gap-2 text-rose-400 bg-rose-500/10 px-2 lg:px-3 xl:px-4 py-1 xl:py-1.5 rounded-lg xl:rounded-xl text-xs md:text-sm xl:text-lg border border-rose-500/20 shadow-lg shadow-rose-500/10 shrink-0">
                   Max: <span className="font-bold text-white">{stats.max}</span>
                 </span>
                 
-                <div className="h-4 xl:h-6 w-px bg-white/10 mx-1"></div>
+                <div className="hidden md:block h-4 xl:h-6 w-px bg-white/10 mx-1"></div>
                 
                 {/* Proposed Final Estimate */}
-                <span className="flex items-center gap-2 text-emerald-400 bg-emerald-500/10 px-3 xl:px-5 py-1 xl:py-1.5 rounded-lg xl:rounded-xl text-sm xl:text-lg border border-emerald-500/30 shadow-[0_0_30px_rgba(52,211,153,0.15)] relative overflow-hidden group">
+                <span className="flex items-center gap-2 text-emerald-400 bg-emerald-500/10 px-3 xl:px-5 py-1 xl:py-1.5 rounded-lg xl:rounded-xl text-sm xl:text-lg border border-emerald-500/30 shadow-[0_0_30px_rgba(52,211,153,0.15)] relative overflow-hidden group shrink-0">
                   <div className="absolute inset-x-0 top-0 h-[1px] bg-emerald-400/50"></div>
                   <Sparkles className="h-3.5 w-3.5 relative z-10 animate-pulse" />
                   <span className="relative z-10 tracking-[0.2em] uppercase text-[8px] xl:text-[9px] font-black pt-1 hidden md:inline-block">PROPOSED:</span>
@@ -249,7 +319,19 @@ export function PlanningBoard({ room, roomId, users, isAdmin, currentUserId }: P
                 </span>
               </div>
             )}
-          </h2>
+          </div>
+          
+          <div className="mt-2 w-full max-w-sm">
+            {room.currentTicket ? (
+              <div className="w-full bg-indigo-500/20 border border-indigo-500/50 rounded-lg px-4 py-2 text-sm text-indigo-300 font-bold uppercase tracking-widest truncate shadow-[0_0_15px_rgba(99,102,241,0.2)]">
+                Selecting: {room.currentTicket}
+              </div>
+            ) : (
+              <div className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-xs text-white/50 italic">
+                {isAdmin ? "Select a ticket from the sidebar to begin..." : "Waiting for ticket selection..."}
+              </div>
+            )}
+          </div>
           
           {/* Voter Count & Progress */}
           <div className="flex items-center gap-2 mt-1 xl:mt-2">
@@ -298,14 +380,22 @@ export function PlanningBoard({ room, roomId, users, isAdmin, currentUserId }: P
         </div>
         
         {isAdmin && (
-          <div className="flex items-center justify-center sm:justify-start w-full md:w-auto gap-2 sm:gap-3 shrink-0 border-t border-white/5 pt-4 md:pt-0 md:border-none mt-2 md:mt-0">
+          <div className="flex items-center justify-center sm:justify-start w-full md:w-auto gap-2 sm:gap-3 shrink-0 border-t border-white/5 pt-4 md:pt-0 md:border-none mt-2 md:mt-0 flex-wrap">
             <button 
               onClick={handleClear}
               className="px-3 sm:px-6 py-2.5 sm:py-3 rounded-xl border border-white/10 bg-white/5 text-xs sm:text-sm font-black text-zinc-400 hover:bg-white/10 hover:text-white transition-all active:scale-95 flex items-center gap-2"
             >
               <RefreshCw className="h-4 w-4" />
-              Reset Board
+              Reset
             </button>
+            {room.revealed && room.activeTicketId && (
+              <button 
+                onClick={handleSaveAndNext}
+                className="px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl bg-orange-500 text-white text-xs sm:text-sm font-black shadow-[0_15px_40px_rgba(249,115,22,0.2)] transition-all active:scale-95 flex items-center gap-2"
+              >
+                Save & Next
+              </button>
+            )}
             <button 
               onClick={handleReveal}
               className={cn(
@@ -326,12 +416,12 @@ export function PlanningBoard({ room, roomId, users, isAdmin, currentUserId }: P
 
       <div className="flex-grow flex-shrink-0 min-h-[350px] bg-black/20 rounded-2xl xl:rounded-[3rem] p-1 xl:p-2 border border-white/[0.02] flex flex-col">
         <div className="flex-1 overflow-y-auto custom-scrollbar p-2 sm:p-4 xl:p-6">
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 2xl:grid-cols-6 gap-2 sm:gap-3 xl:gap-6">
+          <div className="grid grid-cols-[repeat(auto-fill,minmax(110px,1fr))] sm:grid-cols-[repeat(auto-fill,minmax(140px,1fr))] lg:grid-cols-[repeat(auto-fill,minmax(170px,1fr))] xl:grid-cols-[repeat(auto-fill,minmax(210px,1fr))] gap-2 sm:gap-3 xl:gap-6 justify-items-start">
             {filteredUsers.map((u) => (
               <div 
                 key={u.id}
                 className={cn(
-                  "flex flex-col items-center justify-center p-2 sm:p-4 xl:p-8 rounded-xl xl:rounded-[2.5rem] border transition-all duration-700 relative group/member",
+                  "flex flex-col items-center justify-center p-2 sm:p-4 xl:p-8 rounded-xl xl:rounded-[2.5rem] border transition-all duration-700 relative group/member w-full h-full",
                   getGroupStyles(u.group).split(' ')[0], 
                   getGroupStyles(u.group).split(' ')[1],
                   room.revealed && u.vote && "shadow-[0_0_40px_rgba(99,102,241,0.1)] scale-105"
@@ -412,65 +502,20 @@ export function PlanningBoard({ room, roomId, users, isAdmin, currentUserId }: P
       <div className="shrink-0 flex flex-col items-center justify-center p-3 md:p-4 xl:p-8 rounded-2xl xl:rounded-[3rem] bg-indigo-500/[0.02] border border-indigo-500/10 relative overflow-hidden backdrop-blur-3xl mt-auto z-10 group/deck">
          <div className="absolute inset-0 bg-gradient-to-t from-indigo-500/5 to-transparent pointer-events-none"></div>
          
-         {/* Left Edge Indicator & Hover Zone */}
          <div 
-           className={cn(
-             "absolute left-0 top-0 bottom-0 w-16 md:w-24 lg:w-32 bg-gradient-to-r from-black/80 via-black/40 to-transparent z-40 transition-opacity duration-300 flex items-center justify-start pl-2 md:pl-4",
-             canScrollLeft ? "opacity-100 cursor-w-resize" : "opacity-0 pointer-events-none"
-           )}
-           onMouseEnter={() => handleHoverScroll('left')}
-           onMouseLeave={stopHoverScroll}
+            className="flex flex-wrap gap-2 sm:gap-3 md:gap-4 mx-auto items-center justify-center py-4 w-full relative z-10"
          >
-           <ChevronLeft className="h-6 w-6 md:h-8 md:w-8 text-white/50 animate-pulse drop-shadow-xl" />
+            {cards.map((card) => (
+              <div key={card} className="shrink-0 flex justify-center">
+                {renderCard(card)}
+              </div>
+            ))}
          </div>
-
-         {/* Right Edge Indicator & Hover Zone */}
-         <div 
-           className={cn(
-             "absolute right-0 top-0 bottom-0 w-16 md:w-24 lg:w-32 bg-gradient-to-l from-black/80 via-black/40 to-transparent z-40 transition-opacity duration-300 flex items-center justify-end pr-2 md:pr-4",
-             canScrollRight ? "opacity-100 cursor-e-resize" : "opacity-0 pointer-events-none"
-           )}
-           onMouseEnter={() => handleHoverScroll('right')}
-           onMouseLeave={stopHoverScroll}
-         >
-           <ChevronRight className="h-6 w-6 md:h-8 md:w-8 text-white/50 animate-pulse drop-shadow-xl" />
-         </div>
-
-         <div 
-            ref={scrollRef}
-            onScroll={updateScrollButtons}
-            onMouseDown={(e) => {
-              if (!scrollRef.current) return;
-              isDragging.current = true;
-              dragDelta.current = 0;
-              startX.current = e.pageX - scrollRef.current.offsetLeft;
-              scrollLeftPos.current = scrollRef.current.scrollLeft;
-            }}
-            onMouseLeave={() => { isDragging.current = false; stopHoverScroll(); }}
-            onMouseUp={() => { 
-              isDragging.current = false; 
-              setTimeout(() => { dragDelta.current = 0; }, 50);
-            }}
-            onMouseMove={(e) => {
-              if (!isDragging.current || !scrollRef.current) return;
-              e.preventDefault();
-              const x = e.pageX - scrollRef.current.offsetLeft;
-              const walk = (x - startX.current) * 1.5;
-              dragDelta.current += Math.abs(walk);
-              scrollRef.current.scrollLeft = scrollLeftPos.current - walk;
-              updateScrollButtons();
-            }}
-            className="flex overflow-x-auto relative z-10 w-full max-w-full items-center py-8 sm:py-10 md:py-12 px-4 sm:px-8 xl:px-12 scrollbar-none snap-x snap-mandatory sm:snap-none touch-pan-x cursor-grab active:cursor-grabbing"
-         >
-            <div className="flex gap-3 sm:gap-4 md:gap-6 mx-auto items-center">
-              {cards.map((card) => (
-                <div key={card} className="shrink-0 snap-center flex justify-center">
-                  {renderCard(card)}
-                </div>
-              ))}
-            </div>
-         </div>
-         <p className="mt-5 text-xs font-black text-zinc-600 uppercase tracking-[0.4em] animate-pulse">Select your estimation card</p>
+      </div>
+      </div>
+      
+      <div className="hidden lg:block h-full">
+         <TicketSidebar roomId={roomId} isAdmin={isAdmin} activeTicketId={room.activeTicketId} />
       </div>
     </div>
   );

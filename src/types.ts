@@ -6,6 +6,20 @@ export interface RoomData {
   status: "planning" | "retro";
   revealed: boolean;
   createdAt: any;
+  currentTicket?: string;
+  activeTicketId?: string | null;
+}
+
+export interface Ticket {
+  id?: string;
+  name: string;
+  link?: string;
+  status: "todo" | "planning" | "completed" | "open";
+  estimate?: string | null;
+  votesAtCompletion?: number;
+  totalUsersAtCompletion?: number;
+  order?: number;
+  createdAt: any;
 }
 
 export interface RoomUser {
