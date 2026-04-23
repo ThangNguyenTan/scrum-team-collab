@@ -169,7 +169,7 @@ export function PlanningBoard({ room, roomId, users, isAdmin, currentUserId }: P
         onClick={() => handleVote(card)}
         disabled={room.revealed}
         className={cn(
-          "flex flex-col items-center justify-center h-16 w-12 sm:h-20 sm:w-14 lg:h-24 lg:w-16 xl:h-32 xl:w-24 rounded-xl lg:rounded-2xl transition-all group relative",
+          "flex flex-col items-center justify-center h-16 w-12 sm:h-20 sm:w-14 lg:h-24 lg:w-16 xl:h-32 xl:w-24 2xl:h-40 2xl:w-28 rounded-xl lg:rounded-2xl 2xl:rounded-[2rem] transition-all group relative",
           myVote === card 
             ? "bg-indigo-500 border-[3px] border-indigo-400 scale-110 shadow-[0_20px_60px_rgba(99,102,241,0.4)] z-20" 
             : "bg-black/60 border border-white/10",
@@ -203,7 +203,7 @@ export function PlanningBoard({ room, roomId, users, isAdmin, currentUserId }: P
         
         <div className="relative z-10 flex flex-col items-center">
           <span className={cn(
-            "text-lg sm:text-xl lg:text-3xl xl:text-4xl font-black transition-transform group-hover:scale-125 duration-500 drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]",
+            "text-lg sm:text-xl lg:text-3xl xl:text-4xl 2xl:text-5xl font-black transition-transform group-hover:scale-125 duration-500 drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]",
             card === "☕" ? "text-xl sm:text-2xl lg:text-3xl xl:text-4xl" : "",
             "text-white"
           )}>
@@ -362,12 +362,12 @@ export function PlanningBoard({ room, roomId, users, isAdmin, currentUserId }: P
 
       <div className="flex-grow flex-shrink-0 min-h-[350px] bg-black/20 rounded-2xl xl:rounded-[3rem] p-1 xl:p-2 border border-white/[0.02] flex flex-col">
         <div className="flex-1 overflow-y-auto custom-scrollbar p-2 sm:p-4 xl:p-6">
-          <div className="grid grid-cols-[repeat(auto-fill,minmax(110px,1fr))] sm:grid-cols-[repeat(auto-fill,minmax(140px,1fr))] lg:grid-cols-[repeat(auto-fill,minmax(170px,1fr))] xl:grid-cols-[repeat(auto-fill,minmax(210px,1fr))] gap-2 sm:gap-3 xl:gap-6 justify-items-start">
+          <div className="grid grid-cols-[repeat(auto-fill,minmax(110px,1fr))] sm:grid-cols-[repeat(auto-fill,minmax(140px,1fr))] lg:grid-cols-[repeat(auto-fill,minmax(170px,1fr))] xl:grid-cols-[repeat(auto-fill,minmax(210px,1fr))] 2xl:grid-cols-[repeat(auto-fill,minmax(250px,1fr))] gap-2 sm:gap-3 xl:gap-6 justify-items-start">
             {filteredUsers.map((u) => (
               <div 
                 key={u.id}
                 className={cn(
-                  "flex flex-col items-center justify-center p-2 sm:p-4 xl:p-8 rounded-xl xl:rounded-[2.5rem] border transition-all duration-700 relative group/member w-full h-full",
+                  "flex flex-col items-center justify-center p-2 sm:p-4 xl:p-8 2xl:p-10 rounded-xl xl:rounded-[2.5rem] 2xl:rounded-[3rem] border transition-all duration-700 relative group/member w-full h-full",
                   getGroupStyles(u.group).split(' ')[0], 
                   getGroupStyles(u.group).split(' ')[1],
                   room.revealed && u.vote && "shadow-[0_0_40px_rgba(99,102,241,0.1)] scale-105"
@@ -382,7 +382,7 @@ export function PlanningBoard({ room, roomId, users, isAdmin, currentUserId }: P
                     </div>
                   )}
                   <div className={cn(
-                    "h-20 w-14 sm:h-24 sm:w-16 md:h-28 md:w-20 lg:h-32 lg:w-24 xl:h-36 xl:w-28 rounded-lg md:rounded-2xl flex items-center justify-center transition-all duration-1000 perspective-1000 group/card cursor-pointer mb-2 xl:mb-8",
+                    "h-20 w-14 sm:h-24 sm:w-16 md:h-28 md:w-20 lg:h-32 lg:w-24 xl:h-36 xl:w-28 2xl:h-44 2xl:w-32 rounded-lg md:rounded-2xl 2xl:rounded-[1.5rem] flex items-center justify-center transition-all duration-1000 perspective-1000 group/card cursor-pointer mb-2 xl:mb-8",
                     room.revealed ? "rotate-0 scale-110" : u.vote ? "rotate-y-180" : "opacity-10 scale-90"
                   )}>
                       {room.revealed ? (
@@ -409,7 +409,7 @@ export function PlanningBoard({ room, roomId, users, isAdmin, currentUserId }: P
                           <div className="absolute top-1 left-1 lg:top-3 lg:left-3 text-[6px] md:text-[8px] opacity-30 font-black tracking-tighter uppercase z-20">ESTM</div>
                           <div className="absolute bottom-1 right-1 lg:bottom-3 lg:right-3 text-[6px] md:text-[8px] opacity-30 font-black tracking-tighter self-end rotate-180 uppercase z-20">ESTM</div>
                           <div className="flex flex-col items-center relative z-20">
-                            <span className="text-3xl md:text-5xl xl:text-7xl font-black tracking-tighter mt-1">{u.vote === "☕" ? <Coffee className="h-6 w-6 lg:h-12 lg:w-12" /> : (u.vote || "-")}</span>
+                            <span className="text-3xl md:text-5xl xl:text-7xl 2xl:text-8xl font-black tracking-tighter mt-1">{u.vote === "☕" ? <Coffee className="h-6 w-6 lg:h-12 lg:w-12 2xl:h-16 2xl:w-16" /> : (u.vote || "-")}</span>
                             {u.vote && ANIMAL_MAPPING[u.vote] && (
                               <span className="text-[8px] md:text-[10px] font-black uppercase tracking-[0.2em] text-black/60">{ANIMAL_MAPPING[u.vote].name}</span>
                             )}
@@ -447,7 +447,7 @@ export function PlanningBoard({ room, roomId, users, isAdmin, currentUserId }: P
           </div>
       </div>
 
-      <div className="shrink-0 flex flex-col items-center justify-center p-3 md:p-4 xl:p-8 rounded-2xl xl:rounded-[3rem] bg-indigo-500/[0.02] border border-indigo-500/10 relative overflow-hidden backdrop-blur-3xl mt-auto z-10 group/deck">
+      <div className="shrink-0 flex flex-col items-center justify-center p-3 md:p-4 xl:p-8 2xl:p-12 rounded-2xl xl:rounded-[3rem] 2xl:rounded-[4rem] bg-indigo-500/[0.02] border border-indigo-500/10 relative overflow-hidden backdrop-blur-3xl mt-auto z-10 group/deck">
          <div className="absolute inset-0 bg-gradient-to-t from-indigo-500/5 to-transparent pointer-events-none"></div>
          
          <div 
