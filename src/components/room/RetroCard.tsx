@@ -1,4 +1,5 @@
 import { ThumbsUp, Edit2, Trash2, X, UploadCloud } from "lucide-react";
+import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { RetroCard as RetroCardType } from "@/types";
 import { useState } from "react";
@@ -50,11 +51,13 @@ export function RetroCard({
           <div className="absolute top-0 left-0 w-full h-[2px] bg-indigo-500"></div>
           
           {editingImage && (
-            <div className="relative w-full rounded-xl overflow-hidden bg-black/40 border border-indigo-500/20 mb-2">
-              <img 
+            <div className="relative w-full min-h-[150px] rounded-xl overflow-hidden bg-black/40 border border-indigo-500/20 mb-2">
+              <Image 
                 src={editingImage} 
                 alt="Preview" 
-                className="w-full h-auto max-h-60 object-contain opacity-90" 
+                fill
+                unoptimized
+                className="object-contain opacity-90" 
               />
               <button 
                 onClick={() => setEditingImage("")}
@@ -115,12 +118,13 @@ export function RetroCard({
       ) : (
         <>
           {card.imageUrl && (
-            <div className="w-full rounded-2xl overflow-hidden bg-black/40 border border-white/5 group-hover:border-white/10 transition-all duration-500 mb-1">
-              <img 
+            <div className="w-full relative min-h-[150px] rounded-2xl overflow-hidden bg-black/40 border border-white/5 group-hover:border-white/10 transition-all duration-500 mb-1">
+              <Image 
                 src={card.imageUrl} 
                 alt="Insight" 
-                className="w-full h-auto max-h-72 object-cover opacity-80 group-hover:opacity-100 transition-opacity"
-                loading="lazy"
+                fill
+                unoptimized
+                className="object-cover opacity-80 group-hover:opacity-100 transition-opacity"
               />
             </div>
           )}

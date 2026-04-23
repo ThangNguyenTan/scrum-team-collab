@@ -21,7 +21,7 @@ import {
   updateDoc
 } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
-import { cn, copyToClipboard } from "@/lib/utils";
+import { copyToClipboard } from "@/lib/utils";
 import { RoomData, RoomUser, RetroColumn, RetroCard } from "@/types";
 import { EMOJIS } from "@/constants";
 
@@ -115,15 +115,16 @@ export default function RoomPage() {
       syncAuth();
     });
     return () => unsubscribe();
-  }, [roomId, router]);
+  }, [roomId, router, avatar]);
 
+  // Rest unchanged ...
   useEffect(() => {
     if (roomId) {
       localStorage.setItem("scrum_last_room", roomId);
     }
 
     const lastTab = localStorage.getItem(`scrum_tab_${roomId}`) as "planning" | "retro";
-    if (lastTab) setActiveTab(lastTab);
+    if (lastTab) setTimeout(() => setActiveTab(lastTab), 0);
   }, [roomId]);
 
   // --- Heartbeat & Cleanup ---
@@ -151,7 +152,7 @@ export default function RoomPage() {
 
   useEffect(() => {
     if (room && isAdmin && !displayName && room.creatorName) {
-      setDisplayName(room.creatorName);
+      setTimeout(() => setDisplayName(room.creatorName), 0);
     }
   }, [room, isAdmin, displayName]);
 
@@ -224,7 +225,7 @@ export default function RoomPage() {
       colsSub();
       cardsSub();
     };
-  }, [roomId, router, user, displayName, avatar]);
+  }, [roomId, router, user, displayName, avatar, userGroup]);
 
   const sortedUsers = useMemo(() => {
     return [...users].sort((a, b) => {

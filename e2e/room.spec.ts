@@ -87,7 +87,7 @@ test.describe('Room E2E', () => {
     await expect(page.getByText('What went well', { exact: true })).toBeVisible({ timeout: 10000 });
 
     // Focus isolation to the first column 
-    const firstColumn = page.locator('div.flex-col').filter({ hasText: 'What went well' }).first();
+
 
     // Start adding a card
     const addCardButton = page.getByRole('button', { name: 'Add a card', exact: true }).first();

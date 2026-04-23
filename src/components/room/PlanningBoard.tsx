@@ -1,9 +1,10 @@
-import { useMemo, useRef, useState, useEffect } from "react";
-import { doc, updateDoc, setDoc, writeBatch, collection, query, orderBy, getDocs } from "firebase/firestore";
+import { useMemo, useState } from "react";
+import Image from "next/image";
+import { doc, updateDoc, setDoc, writeBatch, collection, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { Coffee, Zap, RefreshCw, EyeOff, Eye, CheckCircle2, Sparkles, ChevronLeft, ChevronRight, Users } from "lucide-react";
+import { Coffee, Zap, RefreshCw, EyeOff, Eye, CheckCircle2, Sparkles, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { RoomData, RoomUser } from "@/types";
+import { RoomData, RoomUser, Ticket } from "@/types";
 import { PLANNING_CARDS, ANIMAL_MAPPING } from "@/constants";
 import { TicketSidebar } from "./TicketSidebar";
 
@@ -16,20 +17,10 @@ interface PlanningBoardProps {
 }
 
 export function PlanningBoard({ room, roomId, users, isAdmin, currentUserId }: PlanningBoardProps) {
-  if (!room) return null;
   const cards = PLANNING_CARDS;
   const myVote = users.find((u) => u.id === currentUserId)?.vote;
   const allVoted = users.length > 0 && users.every((u) => u.vote);
-
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const scrollAnimation = useRef<number | null>(null);
-  const isDragging = useRef(false);
-  const startX = useRef(0);
-  const scrollLeftPos = useRef(0);
-  const dragDelta = useRef(0);
   
-  const [canScrollLeft, setCanScrollLeft] = useState(false);
-  const [canScrollRight, setCanScrollRight] = useState(true);
   const [activeGroup, setActiveGroup] = useState<string | null>(null);
 
   const groupColors: Record<string, string> = {
@@ -57,61 +48,12 @@ export function PlanningBoard({ room, roomId, users, isAdmin, currentUserId }: P
     return users.filter(u => u.group === activeGroup);
   }, [users, activeGroup]);
 
-  const updateScrollButtons = () => {
-    if (!scrollRef.current) return;
-    const { scrollLeft, scrollWidth, clientWidth } = scrollRef.current;
-    setCanScrollLeft(Math.ceil(scrollLeft) > 0);
-    // Be a bit more forgiving with the right threshold for subpixel scrolling
-    setCanScrollRight(Math.ceil(scrollLeft) < scrollWidth - clientWidth - 2);
-  };
 
-  useEffect(() => {
-    updateScrollButtons();
-    // Safety sync after layout paint
-    const tId = setTimeout(updateScrollButtons, 150);
-    const tId2 = setTimeout(updateScrollButtons, 500);
-    
-    window.addEventListener('resize', updateScrollButtons);
-    return () => {
-      clearTimeout(tId);
-      clearTimeout(tId2);
-      window.removeEventListener('resize', updateScrollButtons);
-    }
-  }, []);
 
-  const handleHoverScroll = (direction: 'left' | 'right') => {
-    if (scrollAnimation.current) cancelAnimationFrame(scrollAnimation.current);
-    
-    const scrollStep = () => {
-      if (!scrollRef.current) return;
-      
-      const el = scrollRef.current;
-      const prev = el.scrollLeft;
-      el.scrollLeft += direction === 'left' ? -12 : 12;
-      
-      // Keep going if we actually moved
-      if (el.scrollLeft !== prev) {
-        scrollAnimation.current = requestAnimationFrame(scrollStep);
-      } else {
-        // We hit the edge, make sure buttons sync up immediately
-        updateScrollButtons();
-      }
-    };
-    
-    scrollAnimation.current = requestAnimationFrame(scrollStep);
-  };
 
-  const stopHoverScroll = () => {
-    if (scrollAnimation.current) {
-      cancelAnimationFrame(scrollAnimation.current);
-      scrollAnimation.current = null;
-    }
-  };
 
   const handleVote = async (value: string) => {
     if (!currentUserId || room.revealed) return;
-    // Debounce vote if it was a drag
-    if (dragDelta.current > 5) return;
     await setDoc(doc(db, "rooms", roomId, "users", currentUserId), {
       vote: value === myVote ? null : value
     }, { merge: true });
@@ -130,7 +72,7 @@ export function PlanningBoard({ room, roomId, users, isAdmin, currentUserId }: P
     // Save to active ticket if we have one and a proposal
     if (room.activeTicketId && stats && room.revealed) {
       const votedUsers = users.filter(u => u.vote).length;
-      batch.update(doc(db, "rooms", roomId, "tickets", room.activeTicketId), {
+      batch.update(doc(db, "rooms", roomId, "tickets", room.activeTicketId!), {
         status: "completed",
         estimate: stats.proposal,
         votesAtCompletion: votedUsers,
@@ -140,7 +82,7 @@ export function PlanningBoard({ room, roomId, users, isAdmin, currentUserId }: P
 
     // Fetch tickets to find the next one in line
     const ticketsSnap = await getDocs(collection(db, "rooms", roomId, "tickets"));
-    const allTickets = ticketsSnap.docs.map(d => ({ id: d.id, ...d.data() as any }));
+    const allTickets = ticketsSnap.docs.map(d => ({ id: d.id, ...d.data() } as Ticket));
     
     // Stably sort exactly like the UI to find the precise "next" ticket
     allTickets.sort((a, b) => {
@@ -171,7 +113,7 @@ export function PlanningBoard({ room, roomId, users, isAdmin, currentUserId }: P
 
     if (nextTicket) {
       // Put next ticket into planning tracking
-      batch.update(doc(db, "rooms", roomId, "tickets", nextTicket.id), { status: "planning" });
+      batch.update(doc(db, "rooms", roomId, "tickets", nextTicket.id!), { status: "planning" });
       batch.update(doc(db, "rooms", roomId), {
         revealed: false,
         currentTicket: nextTicket.name,
@@ -198,8 +140,8 @@ export function PlanningBoard({ room, roomId, users, isAdmin, currentUserId }: P
     }
   }
 
-  const stats = useMemo(() => {
-    if (!room.revealed) return null;
+  const stats = (() => {
+    if (!room?.revealed) return null;
     const votes = filteredUsers
       .map((u) => parseFloat(u.vote || ""))
       .filter((v) => !isNaN(v));
@@ -216,7 +158,7 @@ export function PlanningBoard({ room, roomId, users, isAdmin, currentUserId }: P
       max: Math.max(...votes),
       proposal: proposal.toString()
     };
-  }, [filteredUsers, room.revealed]);
+  })();
 
   const renderCard = (card: string) => {
     const animal = ANIMAL_MAPPING[card];
@@ -239,11 +181,13 @@ export function PlanningBoard({ room, roomId, users, isAdmin, currentUserId }: P
         {/* Animal Backdrop Wrapper with Overflow Hidden and Safari Webkit fix */}
         {animal && (
           <div className="absolute inset-x-0 inset-y-0 z-0 overflow-hidden rounded-[inherit] [transform:translateZ(0)] border-[0.5px] border-transparent">
-            <img 
+            <Image 
               src={animal.image} 
               alt={animal.name}
+              fill
+              unoptimized
               className={cn(
-                "h-full w-full object-cover transition-all duration-700",
+                "object-cover transition-all duration-700",
                 myVote === card ? "opacity-40 grayscale-0 scale-110" : "opacity-10 grayscale group-hover:opacity-30 group-hover:grayscale-0"
               )}
             />
@@ -285,6 +229,8 @@ export function PlanningBoard({ room, roomId, users, isAdmin, currentUserId }: P
       </button>
     );
   };
+
+  if (!room) return null;
 
   return (
     <div className="flex h-full w-full overflow-hidden">
@@ -447,10 +393,12 @@ export function PlanningBoard({ room, roomId, users, isAdmin, currentUserId }: P
                           {/* Animal Reveal Backdrop */}
                           {u.vote && ANIMAL_MAPPING[u.vote] && (
                             <div className="absolute inset-0 z-0">
-                               <img 
+                               <Image 
                                  src={ANIMAL_MAPPING[u.vote].image} 
                                  alt={ANIMAL_MAPPING[u.vote].name}
-                                 className="h-full w-full object-cover opacity-20 filter sepia-[0.3]"
+                                 fill
+                                 unoptimized
+                                 className="object-cover opacity-20 filter sepia-[0.3]"
                                />
                             </div>
                           )}

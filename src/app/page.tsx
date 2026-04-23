@@ -13,7 +13,7 @@ import {
   serverTimestamp 
 } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
-import { Zap, ChevronRight } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import EmojiPicker, { Theme } from "emoji-picker-react";
 import { EMOJIS, FEATURES, TEAM_GROUPS } from "@/constants";
@@ -75,16 +75,18 @@ export default function Home() {
       }
     });
 
-    const savedName = localStorage.getItem("scrum_user_name");
-    if (savedName) setName(savedName);
+    setTimeout(() => {
+      const savedName = localStorage.getItem("scrum_user_name");
+      if (savedName) setName(savedName);
 
-    const savedAvatar = localStorage.getItem("scrum_user_avatar");
-    if (savedAvatar) setAvatar(savedAvatar); else {
-      setAvatar(EMOJIS[Math.floor(Math.random() * EMOJIS.length)]);
-    }
+      const savedAvatar = localStorage.getItem("scrum_user_avatar");
+      if (savedAvatar) setAvatar(savedAvatar); else {
+        setAvatar(EMOJIS[Math.floor(Math.random() * EMOJIS.length)]);
+      }
 
-    const savedGroup = localStorage.getItem("scrum_user_group");
-    if (savedGroup) setGroup(savedGroup);
+      const savedGroup = localStorage.getItem("scrum_user_group");
+      if (savedGroup) setGroup(savedGroup);
+    }, 0);
 
     return () => unsubscribe();
   }, []);

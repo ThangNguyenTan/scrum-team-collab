@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
-import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, updateDoc, doc, writeBatch, getDocs, deleteDoc } from "firebase/firestore";
+import { collection, query, onSnapshot, addDoc, serverTimestamp, updateDoc, doc, writeBatch, getDocs, deleteDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { Ticket } from "@/types";
-import { CheckCircle2, Eye, Filter, ExternalLink, Activity, Plus, Trash2, ChevronDown, ListTodo, ChevronRight } from "lucide-react";
+import { CheckCircle2, Eye, ExternalLink, Activity, Plus, Trash2, ChevronDown, ListTodo, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface TicketSidebarProps {

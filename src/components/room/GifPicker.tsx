@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import Image from "next/image";
 import { Search, Loader2, X } from "lucide-react";
-import { cn } from "@/lib/utils";
 
 interface GifPickerProps {
   onSelect: (url: string) => void;
@@ -11,7 +11,8 @@ interface GifPickerProps {
 
 export default function GifPicker({ onSelect, onClose }: GifPickerProps) {
   const [query, setQuery] = useState("");
-  const [gifs, setGifs] = useState<any[]>([]);
+  /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
+  const [gifs, setGifs] = useState<Record<string, any>[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -99,11 +100,12 @@ export default function GifPicker({ onSelect, onClose }: GifPickerProps) {
               onClick={() => onSelect(gifUrl)}
               className="relative min-h-[180px] rounded-xl overflow-hidden bg-white/5 border-2 border-transparent hover:border-indigo-500 transition-all hover:scale-[1.01] active:scale-[0.98] group shadow-xl z-0 hover:z-10"
             >
-              <img
+              <Image
                 src={gifUrl}
                 alt={gif.title || "Klipy GIF"}
-                className="w-full h-full object-cover transition-opacity group-hover:opacity-90"
-                loading="lazy"
+                fill
+                unoptimized
+                className="object-cover transition-opacity group-hover:opacity-90"
               />
               <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                  <div className="text-xs font-bold text-white bg-indigo-500 px-2 py-1 rounded shadow-lg uppercase tracking-tighter">Select</div>
@@ -114,7 +116,7 @@ export default function GifPicker({ onSelect, onClose }: GifPickerProps) {
 
         {gifs.length === 0 && !loading && !error && (
           <div className="col-span-full py-10 text-center">
-            <p className="text-zinc-500 text-sm font-medium">No GIFs found for "{query}"</p>
+            <p className="text-zinc-500 text-sm font-medium">No GIFs found for &quot;{query}&quot;</p>
           </div>
         )}
 

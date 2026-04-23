@@ -1,4 +1,5 @@
 import { useState, useRef } from "react";
+import Image from "next/image";
 import { 
   doc, 
   updateDoc, 
@@ -15,9 +16,6 @@ import {
   Download, 
   Settings, 
   X, 
-  Edit2, 
-  Trash2, 
-  ThumbsUp, 
   UploadCloud 
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -50,7 +48,6 @@ export function RetroBoard({
   displayName, 
   avatar 
 }: RetroBoardProps) {
-  if (!room) return null;
   const [newCardText, setNewCardText] = useState("");
   const [newCardImage, setNewCardImage] = useState("");
   const [editingCardId, setEditingCardId] = useState<string | null>(null);
@@ -221,6 +218,8 @@ export function RetroBoard({
     setIsExporting(false);
   };
 
+  if (!room) return null;
+
   return (
     <div className="flex flex-col gap-3 md:gap-4 lg:gap-8 h-full p-3 md:p-4 lg:p-6 xl:p-8 overflow-hidden">
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3 md:gap-4 bg-white/[0.02] border border-white/5 p-3 md:p-4 lg:p-6 rounded-[1rem] md:rounded-[1.5rem] xl:rounded-[2rem]">
@@ -329,11 +328,13 @@ export function RetroBoard({
                     />
                     
                     {newCardImage && (
-                      <div className="relative w-full rounded-xl overflow-hidden my-2 bg-black/40 border border-indigo-500/20">
-                        <img 
+                      <div className="relative w-full min-h-[200px] rounded-xl overflow-hidden my-2 bg-black/40 border border-indigo-500/20">
+                        <Image 
                           src={newCardImage} 
                           alt="Preview" 
-                          className="w-full h-auto max-h-80 object-contain opacity-90 transition-opacity" 
+                          fill
+                          unoptimized
+                          className="object-contain opacity-90 transition-opacity" 
                         />
                         <button 
                           onClick={() => setNewCardImage("")}

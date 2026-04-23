@@ -2,11 +2,12 @@ import { useState } from "react";
 import { Users, Crown, CheckCircle2, ChevronLeft, ChevronRight, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { RoomData, RoomUser } from "@/types";
+import { User } from "firebase/auth";
 
 interface UserSidebarProps {
   sortedUsers: RoomUser[];
   room: RoomData | null;
-  user: any; // User | null
+  user: User | null;
   setShowJoinModal: (show: boolean) => void;
 }
 

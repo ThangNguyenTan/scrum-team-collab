@@ -1,11 +1,17 @@
-import { User } from "firebase/auth";
+import { ElementType } from "react";
+
+export interface FirestoreTimestamp {
+  seconds: number;
+  nanoseconds: number;
+  toMillis: () => number;
+}
 
 export interface RoomData {
   creatorId: string;
   creatorName: string;
   status: "planning" | "retro";
   revealed: boolean;
-  createdAt: any;
+  createdAt: FirestoreTimestamp;
   currentTicket?: string;
   activeTicketId?: string | null;
 }
@@ -19,7 +25,7 @@ export interface Ticket {
   votesAtCompletion?: number;
   totalUsersAtCompletion?: number;
   order?: number;
-  createdAt: any;
+  createdAt: FirestoreTimestamp;
 }
 
 export interface RoomUser {
@@ -28,8 +34,8 @@ export interface RoomUser {
   avatar?: string;
   group?: string;
   vote: string | null;
-  lastSeen: any;
-  joinedAt: any;
+  lastSeen: FirestoreTimestamp;
+  joinedAt: FirestoreTimestamp;
 }
 
 export interface RetroColumn {
@@ -47,13 +53,13 @@ export interface RetroCard {
   authorName: string;
   authorId: string;
   authorAvatar?: string;
-  createdAt: any;
+  createdAt: FirestoreTimestamp;
 }
 
 export interface Feature {
   title: string;
   desc: string;
-  icon: any;
+  icon: ElementType;
   color: string;
   styles: string;
   iconStyles: string;
