@@ -94,6 +94,7 @@ export function JoinRoomModal({
           </div>
 
           <div className="space-y-2">
+            <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500 mb-1">Squad / Team Group <span className="text-rose-500">*</span></label>
             <input 
               name="group" 
               type="text" 
@@ -101,6 +102,7 @@ export function JoinRoomModal({
               onChange={(e) => setGroup(e.target.value)}
               placeholder="Team Group (FE, BE, QA...)"
               maxLength={15}
+              required
               className="w-full h-12 rounded-xl bg-white/5 border border-white/10 px-4 text-white font-medium placeholder:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all text-sm"
             />
             <div className="grid grid-cols-5 gap-2 mt-3">

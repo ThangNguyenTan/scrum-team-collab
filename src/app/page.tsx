@@ -215,13 +215,15 @@ export default function Home() {
                   </div>
                 </div>
 
-                <div className="relative group/group-input">
+                <div className="relative group/group-input space-y-2">
+                  <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500 mb-1 ml-1">Squad / Team Group <span className="text-rose-500">*</span></label>
                   <input 
                     type="text"
                     placeholder="Team Group (Ex: FE, BE, QA...)"
                     value={group}
                     onChange={(e) => setGroup(e.target.value)}
                     maxLength={15}
+                    required
                     className="w-full rounded-2xl bg-zinc-900 border border-white/5 px-4 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm font-medium text-zinc-300 placeholder:text-zinc-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 transition-all duration-300"
                   />
                   <div className="grid grid-cols-5 gap-2 mt-3">
