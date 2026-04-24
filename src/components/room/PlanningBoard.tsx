@@ -134,10 +134,12 @@ export function PlanningBoard({ room, roomId, users, isAdmin, currentUserId }: P
 
   const handleClear = async () => {
     if (!isAdmin) return;
-    await updateDoc(doc(db, "rooms", roomId), { revealed: false });
+    const batch = writeBatch(db);
+    batch.update(doc(db, "rooms", roomId), { revealed: false });
     for (const u of users) {
-      await updateDoc(doc(db, "rooms", roomId, "users", u.id), { vote: null });
+      batch.update(doc(db, "rooms", roomId, "users", u.id), { vote: null });
     }
+    await batch.commit();
   }
 
   const stats = (() => {
@@ -463,7 +465,12 @@ export function PlanningBoard({ room, roomId, users, isAdmin, currentUserId }: P
       </div>
       
       <div className="hidden lg:block h-full">
-         <TicketSidebar roomId={roomId} isAdmin={isAdmin} activeTicketId={room.activeTicketId} />
+          <TicketSidebar 
+            roomId={roomId} 
+            isAdmin={isAdmin} 
+            activeTicketId={room.activeTicketId} 
+            users={users}
+          />
       </div>
     </div>
   );

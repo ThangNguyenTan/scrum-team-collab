@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { collection, query, onSnapshot, addDoc, serverTimestamp, updateDoc, doc, writeBatch, getDocs, deleteDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { Ticket } from "@/types";
+import { Ticket, RoomUser } from "@/types";
 import { CheckCircle2, Eye, ExternalLink, Activity, Plus, Trash2, ChevronDown, ListTodo, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -9,9 +9,10 @@ interface TicketSidebarProps {
   roomId: string;
   isAdmin: boolean;
   activeTicketId?: string | null;
+  users: RoomUser[];
 }
 
-export function TicketSidebar({ roomId, isAdmin, activeTicketId }: TicketSidebarProps) {
+export function TicketSidebar({ roomId, isAdmin, activeTicketId, users }: TicketSidebarProps) {
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [newTicketName, setNewTicketName] = useState("");
   const [newTicketLink, setNewTicketLink] = useState("");
@@ -71,9 +72,10 @@ export function TicketSidebar({ roomId, isAdmin, activeTicketId }: TicketSidebar
         revealed: false
       });
       
-      // Clear user votes
-      const usersSnap = await getDocs(collection(db, "rooms", roomId, "users"));
-      usersSnap.forEach(u => batch.update(u.ref, { vote: null }));
+      // Clear user votes using the users prop we already have
+      if (users && users.length > 0) {
+        users.forEach(u => batch.update(doc(db, "rooms", roomId, "users", u.id), { vote: null }));
+      }
     } else if (ticket.status === "planning" && newStatus !== "planning") {
       batch.update(doc(db, "rooms", roomId), {
         activeTicketId: null,

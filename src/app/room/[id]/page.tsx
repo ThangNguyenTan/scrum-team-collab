@@ -59,9 +59,9 @@ export default function RoomPage() {
   // --- Auth & Session ---
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (u) => {
+      setUser(u);
+      
       const syncAuth = async () => {
-        setUser(u);
-        
         const globalName = localStorage.getItem("scrum_user_name");
         const roomSpecificName = localStorage.getItem(`scrum_name_${roomId}`);
         const savedName = roomSpecificName || globalName;
@@ -74,11 +74,18 @@ export default function RoomPage() {
         const roomSpecificGroup = localStorage.getItem(`scrum_group_${roomId}`);
         const savedGroup = roomSpecificGroup || globalGroup;
 
-        const defaultEmoji = EMOJIS[Math.floor(Math.random() * EMOJIS.length)];
-        if (savedName) setDisplayName(savedName);
-        if (savedAvatar) setAvatar(savedAvatar);
-        else if (!avatar) setAvatar(defaultEmoji);
-        if (savedGroup) setUserGroup(savedGroup);
+        // Initialize state from storage only if not already set
+        if (savedName) setDisplayName(prev => prev || savedName);
+        if (savedAvatar) setAvatar(prev => prev || savedAvatar);
+        if (savedGroup) setUserGroup(prev => prev || savedGroup);
+
+        // Fallback for avatar if nothing in storage and nothing in state
+        if (!savedAvatar) {
+          setAvatar(prev => {
+            if (prev) return prev;
+            return EMOJIS[Math.floor(Math.random() * EMOJIS.length)];
+          });
+        }
 
         const isCreator = localStorage.getItem(`scrum_is_creator_${roomId}`) === "true";
         const sessionJoined = sessionStorage.getItem(`scrum_joined_${roomId}`);
@@ -97,7 +104,7 @@ export default function RoomPage() {
           // If already joined in session or is creator, sync with Firestore
           await setDoc(doc(db, "rooms", roomId, "users", u.uid), {
             name: savedName,
-            avatar: savedAvatar || defaultEmoji,
+            avatar: savedAvatar || avatar || EMOJIS[0],
             group: savedGroup || "",
             lastSeen: serverTimestamp(),
             joinedAt: serverTimestamp(),
@@ -115,7 +122,7 @@ export default function RoomPage() {
       syncAuth();
     });
     return () => unsubscribe();
-  }, [roomId, router, avatar]);
+  }, [roomId]); // Removed router and avatar from dependencies
 
   // Rest unchanged ...
   useEffect(() => {
@@ -131,11 +138,12 @@ export default function RoomPage() {
   useEffect(() => {
     if (!user || !roomId) return;
 
+    // Throttle heartbeat to 2 minutes to reduce read/write costs significantly
     const heartbeat = setInterval(async () => {
       await updateDoc(doc(db, "rooms", roomId, "users", user.uid), {
         lastSeen: serverTimestamp()
       }).catch(() => {});
-    }, 30000);
+    }, 120000);
 
     const handleUnload = () => {
       if (user?.uid && roomId) {
@@ -148,13 +156,31 @@ export default function RoomPage() {
       clearInterval(heartbeat);
       window.removeEventListener("beforeunload", handleUnload);
     };
-  }, [user, roomId]);
+  }, [user?.uid, roomId]);
 
+  // Handle auto-join for creator separately from the listeners
   useEffect(() => {
-    if (room && isAdmin && !displayName && room.creatorName) {
-      setTimeout(() => setDisplayName(room.creatorName), 0);
+    if (room && user && user.uid === room.creatorId) {
+      const sessionJoined = sessionStorage.getItem(`scrum_joined_${roomId}`);
+      if (!sessionJoined) {
+        sessionStorage.setItem(`scrum_joined_${roomId}`, "true");
+        setUserHasJoined(true);
+        setShowJoinModal(false);
+        
+        const creatorAvatar = avatar || localStorage.getItem("scrum_user_avatar") || EMOJIS[0];
+        const creatorName = room.creatorName || displayName || localStorage.getItem("scrum_user_name") || "Creator";
+        const creatorGroup = userGroup || localStorage.getItem("scrum_user_group") || "";
+
+        setDoc(doc(db, "rooms", roomId, "users", user.uid), {
+          name: creatorName,
+          avatar: creatorAvatar,
+          group: creatorGroup,
+          lastSeen: serverTimestamp(),
+          joinedAt: serverTimestamp(),
+        }, { merge: true });
+      }
     }
-  }, [room, isAdmin, displayName]);
+  }, [room?.creatorId, user?.uid, roomId]);
 
   // --- Data Listeners ---
   useEffect(() => {
@@ -164,29 +190,6 @@ export default function RoomPage() {
       if (snap.exists()) {
         const roomData = snap.data() as RoomData;
         setRoom(roomData);
-        
-        // Auto-join if creator
-        if (user?.uid === roomData.creatorId) {
-          const sessionJoined = sessionStorage.getItem(`scrum_joined_${roomId}`);
-          if (!sessionJoined) {
-            sessionStorage.setItem(`scrum_joined_${roomId}`, "true");
-            setUserHasJoined(true);
-            setShowJoinModal(false);
-            
-            // Sync creator presence to Firestore immediately if not already there
-            const creatorAvatar = avatar || localStorage.getItem("scrum_user_avatar") || EMOJIS[0];
-            const creatorName = roomData.creatorName || displayName || localStorage.getItem("scrum_user_name") || "Creator";
-            const creatorGroup = userGroup || localStorage.getItem("scrum_user_group") || "";
-
-            setDoc(doc(db, "rooms", roomId, "users", user.uid), {
-              name: creatorName,
-              avatar: creatorAvatar,
-              group: creatorGroup,
-              lastSeen: serverTimestamp(),
-              joinedAt: serverTimestamp(),
-            }, { merge: true });
-          }
-        }
       } else {
         router.push("/");
       }
@@ -198,26 +201,34 @@ export default function RoomPage() {
         .map(d => ({ id: d.id, ...d.data() } as RoomUser))
         .filter(u => {
           if (!u.lastSeen?.seconds) return true; 
-          return now - u.lastSeen.seconds < 600;
+          // Match the increased heartbeat interval (user considered offline after 1 hour of no activity)
+          return now - u.lastSeen.seconds < 3600;
         });
-      setUsers(uList.sort((a,b) => a.joinedAt?.seconds - b.joinedAt?.seconds));
+      setUsers(uList.sort((a,b) => (a.joinedAt?.seconds || 0) - (b.joinedAt?.seconds || 0)));
     });
 
-    const colsSub = onSnapshot(
-      query(collection(db, "rooms", roomId, "columns"), orderBy("order")), 
-      (snap) => {
-        const cList = snap.docs.map(d => ({ id: d.id, ...d.data() } as RetroColumn));
-        setColumns(cList);
-      }
-    );
+    let colsSub = () => {};
+    let cardsSub = () => {};
 
-    const cardsSub = onSnapshot(
-      query(collection(db, "rooms", roomId, "cards"), orderBy("createdAt")), 
-      (snap) => {
-        const dList = snap.docs.map(d => ({ id: d.id, ...d.data() } as RetroCard));
-        setCards(dList);
-      }
-    );
+    // Only subscribe to retro data if we are actually viewing the retro board
+    // This saves a huge amount of reads during planning sessions
+    if (activeTab === "retro") {
+      colsSub = onSnapshot(
+        query(collection(db, "rooms", roomId, "columns"), orderBy("order")), 
+        (snap) => {
+          const cList = snap.docs.map(d => ({ id: d.id, ...d.data() } as RetroColumn));
+          setColumns(cList);
+        }
+      );
+
+      cardsSub = onSnapshot(
+        query(collection(db, "rooms", roomId, "cards"), orderBy("createdAt")), 
+        (snap) => {
+          const dList = snap.docs.map(d => ({ id: d.id, ...d.data() } as RetroCard));
+          setCards(dList);
+        }
+      );
+    }
 
     return () => {
       roomSub();
@@ -225,7 +236,7 @@ export default function RoomPage() {
       colsSub();
       cardsSub();
     };
-  }, [roomId, router, user, displayName, avatar, userGroup]);
+  }, [roomId, activeTab]); // Minimized dependencies to prevent redundant resubscriptions
 
   const sortedUsers = useMemo(() => {
     return [...users].sort((a, b) => {
