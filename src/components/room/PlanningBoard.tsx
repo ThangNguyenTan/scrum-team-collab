@@ -44,13 +44,18 @@ export function PlanningBoard({ room, roomId, users, isAdmin, currentUserId }: P
   }, [users]);
 
   const filteredUsers = useMemo(() => {
-    if (!activeGroup) return users;
-    return users.filter(u => u.group === activeGroup);
+    const list = !activeGroup ? users : users.filter(u => u.group === activeGroup);
+    
+    return [...list].sort((a, b) => {
+      // Sort by group first (normalized to handle capitalization differences)
+      const groupA = (a.group || "").toLowerCase();
+      const groupB = (b.group || "").toLowerCase();
+      if (groupA !== groupB) return groupA.localeCompare(groupB);
+      
+      // Then by name
+      return a.name.toLowerCase().localeCompare(b.name.toLowerCase());
+    });
   }, [users, activeGroup]);
-
-
-
-
 
   const handleVote = async (value: string) => {
     if (!currentUserId || room.revealed) return;
@@ -444,9 +449,9 @@ export function PlanningBoard({ room, roomId, users, isAdmin, currentUserId }: P
                     <span className="text-[8px] md:text-[10px] font-black text-zinc-500 truncate w-full text-center uppercase tracking-[0.2em]">{u.name}</span>
                   </div>
                 </div>
-              ))}
-            </div>
+            ))}
           </div>
+        </div>
       </div>
 
       <div className="shrink-0 flex flex-col items-center justify-center p-3 md:p-4 xl:p-8 2xl:p-12 rounded-2xl xl:rounded-[3rem] 2xl:rounded-[4rem] bg-indigo-500/[0.02] border border-indigo-500/10 relative overflow-hidden backdrop-blur-3xl mt-auto z-10 group/deck">
