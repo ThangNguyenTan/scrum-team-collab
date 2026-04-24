@@ -294,6 +294,24 @@ export default function RoomPage() {
     }
   };
 
+  const handleKickUser = async (userId: string) => {
+    if (!isAdmin || !roomId) return;
+    if (confirm("Are you sure you want to remove this user from the room?")) {
+      await deleteDoc(doc(db, "rooms", roomId, "users", userId));
+    }
+  };
+
+  const handleTransferHost = async (targetUser: RoomUser) => {
+    if (!isAdmin || !roomId || targetUser.id === user?.uid) return;
+    if (confirm(`Transfer Host (Admin) role to ${targetUser.name}?`)) {
+      await updateDoc(doc(db, "rooms", roomId), {
+        creatorId: targetUser.id,
+        creatorName: targetUser.name
+      });
+      localStorage.removeItem(`scrum_is_creator_${roomId}`);
+    }
+  };
+
   if (loading || (!room && !showJoinModal)) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#0a0a0b]" suppressHydrationWarning>
@@ -325,6 +343,9 @@ export default function RoomPage() {
           room={room} 
           user={user} 
           setShowJoinModal={setShowJoinModal}
+          isAdmin={isAdmin}
+          onKickUser={handleKickUser}
+          onTransferHost={handleTransferHost}
         />
 
         <main className="flex-1 bg-black/40 overflow-hidden relative">

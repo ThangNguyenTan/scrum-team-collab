@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Users, Crown, CheckCircle2, ChevronLeft, ChevronRight, Settings } from "lucide-react";
+import { Users, Crown, CheckCircle2, ChevronLeft, ChevronRight, Settings, UserMinus, ShieldCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { RoomData, RoomUser } from "@/types";
 import { User } from "firebase/auth";
@@ -9,9 +9,20 @@ interface UserSidebarProps {
   room: RoomData | null;
   user: User | null;
   setShowJoinModal: (show: boolean) => void;
+  isAdmin: boolean;
+  onKickUser: (userId: string) => void;
+  onTransferHost: (targetUser: RoomUser) => void;
 }
 
-export function UserSidebar({ sortedUsers, room, user, setShowJoinModal }: UserSidebarProps) {
+export function UserSidebar({ 
+  sortedUsers, 
+  room, 
+  user, 
+  setShowJoinModal, 
+  isAdmin, 
+  onKickUser, 
+  onTransferHost 
+}: UserSidebarProps) {
   const [isCollapsed, setIsCollapsed] = useState(true);
 
   return (
@@ -100,13 +111,33 @@ export function UserSidebar({ sortedUsers, room, user, setShowJoinModal }: UserS
             </div>
             
             {!isCollapsed && (
-              u.vote && room?.status === "planning" ? (
-                 <div className="h-6 w-6 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center shrink-0">
-                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
-                 </div>
-              ) : (
-                <div className="h-1.2 w-1.2 rounded-full bg-white/5 group-hover/u:bg-white/20 transition-colors shrink-0"></div>
-              )
+              <div className="flex items-center gap-1">
+                {isAdmin && u.id !== user?.uid && (
+                  <div className="flex items-center gap-1 opacity-0 group-hover/u:opacity-100 transition-opacity">
+                    <button
+                      onClick={() => onTransferHost(u)}
+                      className="p-1.5 rounded-lg hover:bg-amber-500/10 text-zinc-500 hover:text-amber-500 transition-all"
+                      title="Transfer Host"
+                    >
+                      <ShieldCheck className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                      onClick={() => onKickUser(u.id)}
+                      className="p-1.5 rounded-lg hover:bg-rose-500/10 text-zinc-500 hover:text-rose-400 transition-all"
+                      title="Remove User"
+                    >
+                      <UserMinus className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                )}
+                {u.vote && room?.status === "planning" ? (
+                   <div className="h-6 w-6 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center shrink-0">
+                      <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
+                   </div>
+                ) : (
+                  <div className="h-1.2 w-1.2 rounded-full bg-white/5 group-hover/u:bg-white/20 transition-colors shrink-0"></div>
+                )}
+              </div>
             )}
 
             {isCollapsed && u.vote && room?.status === "planning" && (

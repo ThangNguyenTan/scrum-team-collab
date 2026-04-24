@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { collection, query, onSnapshot, addDoc, serverTimestamp, updateDoc, doc, writeBatch, getDocs, deleteDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { Ticket, RoomUser } from "@/types";
@@ -21,21 +21,37 @@ export function TicketSidebar({ roomId, isAdmin, activeTicketId, users }: Ticket
   const [isExpanded, setIsExpanded] = useState(true);
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [dropTargetId, setDropTargetId] = useState<string | null>(null);
+  const [sortOrder, setSortOrder] = useState<'oldest' | 'newest' | 'alpha-asc' | 'alpha-desc' | 'status'>('oldest');
+  
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!roomId) return;
     const q = query(collection(db, "rooms", roomId, "tickets"));
     const unsub = onSnapshot(q, (snap) => {
       const fetched = snap.docs.map((d) => ({ id: d.id, ...d.data() } as Ticket));
+      
       fetched.sort((a, b) => {
-        const aOrder = typeof a.order === 'number' ? a.order : (a.createdAt?.toMillis?.() || 0);
-        const bOrder = typeof b.order === 'number' ? b.order : (b.createdAt?.toMillis?.() || 0);
-        return bOrder - aOrder;
+        if (sortOrder === 'status') {
+          const statusOrder = { 'planning': 0, 'todo': 1, 'open': 1, 'completed': 2 };
+          const aS = statusOrder[a.status as keyof typeof statusOrder] ?? 1;
+          const bS = statusOrder[b.status as keyof typeof statusOrder] ?? 1;
+          if (aS !== bS) return aS - bS;
+        }
+
+        if (sortOrder === 'alpha-asc') return a.name.localeCompare(b.name);
+        if (sortOrder === 'alpha-desc') return b.name.localeCompare(a.name);
+
+        const aVal = typeof a.order === 'number' ? a.order : (a.createdAt?.toMillis?.() || 0);
+        const bVal = typeof b.order === 'number' ? b.order : (b.createdAt?.toMillis?.() || 0);
+        
+        return sortOrder === 'newest' ? bVal - aVal : aVal - bVal;
       });
+      
       setTickets(fetched);
     });
     return () => unsub();
-  }, [roomId]);
+  }, [roomId, sortOrder]);
 
   const handleAddTicket = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,6 +67,16 @@ export function TicketSidebar({ roomId, isAdmin, activeTicketId, users }: Ticket
     setNewTicketName("");
     setNewTicketLink("");
     setShowAddForm(false);
+
+    // If we're sorting by oldest, newest tickets are at the bottom. Scroll there.
+    if (sortOrder === 'oldest') {
+      setTimeout(() => {
+        const container = scrollRef.current;
+        if (container) {
+          container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
+        }
+      }, 300);
+    }
   };
 
   const handleStatusChange = async (ticket: Ticket, newStatus: string) => {
@@ -171,14 +197,35 @@ export function TicketSidebar({ roomId, isAdmin, activeTicketId, users }: Ticket
               </button>
             </div>
 
-            <div className="flex gap-2">
-              <input
-                type="text"
-                placeholder="Search tickets..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="flex-1 bg-black/60 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500/50"
-              />
+            <div className="flex gap-2 items-center">
+              <div className="flex-1 relative">
+                <input
+                  type="text"
+                  placeholder="Search tickets..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full bg-black/60 border border-white/10 rounded-lg pl-3 pr-8 py-2 text-sm text-white focus:outline-none focus:border-indigo-500/50"
+                />
+                <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center pointer-events-none">
+                  <div className="h-4 w-px bg-white/10 mx-1"></div>
+                </div>
+              </div>
+              
+              <div className="relative group/sort">
+                <select
+                  value={sortOrder}
+                  onChange={(e) => setSortOrder(e.target.value as any)}
+                  className="appearance-none bg-black/60 border border-white/10 rounded-lg px-2 py-2 text-[10px] font-black uppercase tracking-widest text-zinc-500 hover:text-white hover:border-white/20 transition-all focus:outline-none cursor-pointer"
+                  title="Sort Order"
+                >
+                  <option value="oldest">Time ↑</option>
+                  <option value="newest">Time ↓</option>
+                  <option value="alpha-asc">A-Z</option>
+                  <option value="alpha-desc">Z-A</option>
+                  <option value="status">Status</option>
+                </select>
+              </div>
+
               {isAdmin && (
                 <button 
                   onClick={() => setShowAddForm(!showAddForm)}
@@ -223,7 +270,10 @@ export function TicketSidebar({ roomId, isAdmin, activeTicketId, users }: Ticket
             )}
           </div>
 
-          <div className="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-2">
+          <div 
+            ref={scrollRef}
+            className="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-2 scroll-smooth"
+          >
             {filteredTickets.map((t) => (
               <div
                 key={t.id}
