@@ -51,7 +51,7 @@ export function RetroCard({
           <div className="absolute top-0 left-0 w-full h-[2px] bg-indigo-500"></div>
           
           {editingImage && (
-            <div className="relative w-full min-h-[150px] rounded-xl overflow-hidden bg-black/40 border border-indigo-500/20 mb-2">
+            <div className="relative w-full min-h-[300px] rounded-xl overflow-hidden bg-black/40 border border-indigo-500/20 mb-2">
               <Image 
                 src={editingImage} 
                 alt="Preview" 
@@ -118,13 +118,13 @@ export function RetroCard({
       ) : (
         <>
           {card.imageUrl && (
-            <div className="w-full relative min-h-[150px] rounded-2xl overflow-hidden bg-black/40 border border-white/5 group-hover:border-white/10 transition-all duration-500 mb-1">
+            <div className="w-full relative min-h-[300px] rounded-2xl overflow-hidden bg-black/40 border border-white/5 group-hover:border-white/10 transition-all duration-500 mb-1">
               <Image 
                 src={card.imageUrl} 
                 alt="Insight" 
                 fill
                 unoptimized
-                className="object-cover opacity-80 group-hover:opacity-100 transition-opacity"
+                className="object-contain opacity-80 group-hover:opacity-100 transition-opacity"
               />
             </div>
           )}

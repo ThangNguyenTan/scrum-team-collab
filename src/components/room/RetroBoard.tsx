@@ -106,20 +106,24 @@ export function RetroBoard({
     const finalName = currentUserData?.name || displayName || (isAdmin ? room?.creatorName : "") || "Team Member";
     const finalAvatar = currentUserData?.avatar || avatar || "";
 
+    const textToSave = newCardText.trim();
+    const imageToSave = newCardImage.trim() || null;
+
+    setNewCardText("");
+    setNewCardImage("");
+    setActiveGifSearch(null);
+    setActiveColumnId(null);
+
     await addDoc(collection(db, "rooms", roomId, "cards"), {
       columnId: colId,
-      text: newCardText.trim(),
-      imageUrl: newCardImage.trim() || null,
+      text: textToSave,
+      imageUrl: imageToSave,
       upvotes: [],
       authorName: finalName,
       authorId: currentUserId,
       authorAvatar: finalAvatar,
       createdAt: serverTimestamp()
     });
-    setNewCardText("");
-    setNewCardImage("");
-    setActiveGifSearch(null);
-    setActiveColumnId(null);
   };
 
   const startEditing = (card: RetroCardType) => {
@@ -328,7 +332,7 @@ export function RetroBoard({
                     />
                     
                     {newCardImage && (
-                      <div className="relative w-full min-h-[200px] rounded-xl overflow-hidden my-2 bg-black/40 border border-indigo-500/20">
+                      <div className="relative w-full min-h-[300px] rounded-xl overflow-hidden my-2 bg-black/40 border border-indigo-500/20">
                         <Image 
                           src={newCardImage} 
                           alt="Preview" 
