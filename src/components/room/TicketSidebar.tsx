@@ -168,7 +168,7 @@ export function TicketSidebar({ roomId, isAdmin, activeTicketId, users }: Ticket
 
   return (
     <div className={cn(
-      "flex flex-col h-full bg-black/40 border-l border-white/5 shrink-0 transition-all duration-300 z-20 overflow-hidden",
+      "flex flex-col h-full bg-zinc-50 dark:bg-black/40 border-l border-zinc-200 dark:border-white/5 shrink-0 transition-all duration-300 z-20 overflow-hidden",
       isExpanded ? "w-full xl:w-80 2xl:w-96" : "w-16"
     )}>
       {!isExpanded ? (
@@ -183,15 +183,15 @@ export function TicketSidebar({ roomId, isAdmin, activeTicketId, users }: Ticket
         </div>
       ) : (
         <>
-          <div className="p-4 border-b border-white/5 flex flex-col gap-3">
+          <div className="p-4 border-b border-zinc-200 dark:border-white/5 flex flex-col gap-3">
             <div className="flex justify-between items-center">
-              <h3 className="font-bold text-white flex items-center gap-2 tracking-tight">
-                <ListTodo className="h-4 w-4 text-indigo-400" />
+              <h3 className="font-bold text-zinc-900 dark:text-white flex items-center gap-2 tracking-tight">
+                <ListTodo className="h-4 w-4 text-indigo-500 dark:text-indigo-400" />
                 Tickets
               </h3>
               <button 
                 onClick={() => setIsExpanded(false)}
-                className="text-zinc-500 hover:text-white transition-colors p-1 hover:bg-white/10 rounded-md"
+                className="text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition-colors p-1 hover:bg-zinc-200 dark:hover:bg-white/10 rounded-md"
               >
                 <ChevronRight className="h-5 w-5" />
               </button>
@@ -204,10 +204,10 @@ export function TicketSidebar({ roomId, isAdmin, activeTicketId, users }: Ticket
                   placeholder="Search tickets..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full bg-black/60 border border-white/10 rounded-lg pl-3 pr-8 py-2 text-sm text-white focus:outline-none focus:border-indigo-500/50"
+                  className="w-full bg-white dark:bg-black/60 border border-zinc-200 dark:border-white/10 rounded-lg pl-3 pr-8 py-2 text-sm text-zinc-900 dark:text-white focus:outline-none focus:border-indigo-500/50"
                 />
                 <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center pointer-events-none">
-                  <div className="h-4 w-px bg-white/10 mx-1"></div>
+                  <div className="h-4 w-px bg-zinc-200 dark:bg-white/10 mx-1"></div>
                 </div>
               </div>
               
@@ -215,7 +215,7 @@ export function TicketSidebar({ roomId, isAdmin, activeTicketId, users }: Ticket
                 <select
                   value={sortOrder}
                   onChange={(e) => setSortOrder(e.target.value as any)}
-                  className="appearance-none bg-black/60 border border-white/10 rounded-lg px-2 py-2 text-[10px] font-black uppercase tracking-widest text-zinc-500 hover:text-white hover:border-white/20 transition-all focus:outline-none cursor-pointer"
+                  className="appearance-none bg-white dark:bg-black/60 border border-zinc-200 dark:border-white/10 rounded-lg px-2 py-2 text-[10px] font-black uppercase tracking-widest text-zinc-600 dark:text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:border-zinc-300 dark:hover:border-white/20 transition-all focus:outline-none cursor-pointer"
                   title="Sort Order"
                 >
                   <option value="oldest">Time ↑</option>
@@ -231,7 +231,7 @@ export function TicketSidebar({ roomId, isAdmin, activeTicketId, users }: Ticket
                   onClick={() => setShowAddForm(!showAddForm)}
                   className={cn(
                     "flex-shrink-0 w-10 h-10 flex items-center justify-center border rounded-lg transition-colors",
-                    showAddForm ? "bg-indigo-500/20 text-indigo-400 border-indigo-500/50" : "bg-black/60 border-white/10 text-zinc-400 hover:text-white"
+                    showAddForm ? "bg-indigo-50 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 border-indigo-200 dark:border-indigo-500/50" : "bg-white dark:bg-black/60 border-zinc-200 dark:border-white/10 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
                   )}
                 >
                   <Plus className="h-4 w-4" />
@@ -240,14 +240,14 @@ export function TicketSidebar({ roomId, isAdmin, activeTicketId, users }: Ticket
             </div>
 
             {showAddForm && isAdmin && (
-              <form onSubmit={handleAddTicket} className="flex flex-col gap-2 p-3 bg-white/5 border border-white/10 rounded-xl mt-1">
+              <form onSubmit={handleAddTicket} className="flex flex-col gap-2 p-3 bg-white dark:bg-white/5 border border-zinc-200 dark:border-white/10 rounded-xl mt-1 shadow-sm dark:shadow-none">
                 <input
                   type="text"
                   placeholder="Ticket ID (max 20 chars)"
                   maxLength={20}
                   value={newTicketName}
                   onChange={(e) => setNewTicketName(e.target.value)}
-                  className="w-full bg-black/40 border border-white/5 rounded-md px-3 py-1.5 text-sm text-white focus:outline-none focus:border-indigo-500/30"
+                  className="w-full bg-zinc-50 dark:bg-black/40 border border-zinc-200 dark:border-white/5 rounded-md px-3 py-1.5 text-sm text-zinc-900 dark:text-white focus:outline-none focus:border-indigo-500/30"
                   required
                 />
                 <input
@@ -255,7 +255,7 @@ export function TicketSidebar({ roomId, isAdmin, activeTicketId, users }: Ticket
                   placeholder="Link URL (optional)"
                   value={newTicketLink}
                   onChange={(e) => setNewTicketLink(e.target.value)}
-                  className="w-full bg-black/40 border border-white/5 rounded-md px-3 py-1.5 text-sm text-white focus:outline-none focus:border-indigo-500/30"
+                  className="w-full bg-zinc-50 dark:bg-black/40 border border-zinc-200 dark:border-white/5 rounded-md px-3 py-1.5 text-sm text-zinc-900 dark:text-white focus:outline-none focus:border-indigo-500/30"
                 />
                 <div className="flex justify-end mt-1">
                   <button 
@@ -303,11 +303,11 @@ export function TicketSidebar({ roomId, isAdmin, activeTicketId, users }: Ticket
                   }
                 }}
                 className={cn(
-                  "w-full flex flex-col gap-3 p-3 rounded-xl border transition-all text-left",
-                  isAdmin && t.status !== "completed" ? "cursor-grab active:cursor-grabbing hover:bg-white/10" : "",
+                  "w-full flex flex-col gap-3 p-3 rounded-xl border transition-all text-left shadow-sm dark:shadow-none",
+                  isAdmin && t.status !== "completed" ? "cursor-grab active:cursor-grabbing hover:bg-zinc-100 dark:hover:bg-white/10" : "",
                   t.status === "planning"
-                    ? "bg-indigo-500/5 border-indigo-500/30 shadow-[0_0_15px_rgba(99,102,241,0.05)]"
-                    : "bg-white/[0.02] border-white/5",
+                    ? "bg-indigo-50/50 dark:bg-indigo-500/5 border-indigo-200 dark:border-indigo-500/30 shadow-[0_0_15px_rgba(99,102,241,0.05)]"
+                    : "bg-white dark:bg-white/[0.02] border-zinc-200 dark:border-white/5",
                   t.status === "completed" && "opacity-60",
                   draggedId === t.id && "opacity-30 border-dashed border-indigo-500/50",
                   dropTargetId === t.id && (tickets.findIndex(x => x.id === draggedId) < tickets.findIndex(x => x.id === t.id) ? "border-b-4 border-b-indigo-500" : "border-t-4 border-t-indigo-500")
@@ -322,24 +322,24 @@ export function TicketSidebar({ roomId, isAdmin, activeTicketId, users }: Ticket
                           value={t.status === "open" ? "todo" : t.status}
                           onChange={(e) => handleStatusChange(t, e.target.value)}
                           className={cn(
-                            "appearance-none text-[10px] md:text-xs font-black uppercase tracking-wider pl-3 pr-7 py-1.5 rounded-lg bg-black/40 border cursor-pointer focus:border-indigo-500/50 focus:outline-none transition-colors",
-                            t.status === "completed" ? "border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10" :
-                            t.status === "planning" ? "border-indigo-500/30 text-indigo-400 hover:bg-indigo-500/10" :
-                            "border-white/10 text-zinc-300 hover:bg-white/5"
+                            "appearance-none text-[10px] md:text-xs font-black uppercase tracking-wider pl-3 pr-7 py-1.5 rounded-lg bg-zinc-50 dark:bg-black/40 border cursor-pointer focus:border-indigo-500/50 focus:outline-none transition-colors",
+                            t.status === "completed" ? "border-emerald-200 dark:border-emerald-500/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-500/10" :
+                            t.status === "planning" ? "border-indigo-200 dark:border-indigo-500/30 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-500/10" :
+                            "border-zinc-200 dark:border-white/10 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-white/5"
                           )}
                         >
-                          <option className="bg-zinc-900 text-zinc-300 font-bold" value="todo">Todo</option>
-                          <option className="bg-zinc-900 text-indigo-400 font-bold" value="planning">Planning</option>
-                          <option className="bg-zinc-900 text-emerald-400 font-bold" value="completed">Completed</option>
+                          <option className="bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-300 font-bold" value="todo">Todo</option>
+                          <option className="bg-white dark:bg-zinc-900 text-indigo-600 dark:text-indigo-400 font-bold" value="planning">Planning</option>
+                          <option className="bg-white dark:bg-zinc-900 text-emerald-600 dark:text-emerald-400 font-bold" value="completed">Completed</option>
                         </select>
                         <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 h-3 w-3 pointer-events-none opacity-50" />
                       </div>
                     ) : (
                       <span className={cn(
                         "flex shrink-0 items-center gap-1.5 px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider",
-                        t.status === "completed" ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20" :
-                        t.status === "planning" ? "bg-indigo-500/10 text-indigo-400 border border-indigo-500/20" :
-                        "bg-white/5 text-zinc-400 border border-white/5"
+                        t.status === "completed" ? "bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20" :
+                        t.status === "planning" ? "bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-500/20" :
+                        "bg-zinc-100 dark:bg-white/5 text-zinc-500 dark:text-zinc-400 border border-zinc-200 dark:border-white/5"
                       )}>
                         {t.status === "completed" && <CheckCircle2 className="h-3 w-3" />}
                         {t.status === "planning" && <Activity className="h-3 w-3 animate-pulse" />}
@@ -349,12 +349,12 @@ export function TicketSidebar({ roomId, isAdmin, activeTicketId, users }: Ticket
                     )}
                     
                     {t.link ? (
-                      <a href={t.link} target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()} className="flex items-center gap-1.5 text-[11px] md:text-xs font-mono font-bold text-indigo-300 border border-white/5 hover:border-indigo-500/30 hover:bg-indigo-500/10 hover:text-indigo-200 px-2 py-1.5 rounded-lg bg-black/40 transition-colors truncate">
-                        <ExternalLink className="h-3.5 w-3.5 text-indigo-400 shrink-0" />
+                      <a href={t.link} target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()} className="flex items-center gap-1.5 text-[11px] md:text-xs font-mono font-bold text-indigo-600 dark:text-indigo-300 border border-zinc-200 dark:border-white/5 hover:border-indigo-300 dark:hover:border-indigo-500/30 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 hover:text-indigo-700 dark:hover:text-indigo-200 px-2 py-1.5 rounded-lg bg-zinc-50 dark:bg-black/40 transition-colors truncate">
+                        <ExternalLink className="h-3.5 w-3.5 text-indigo-500 dark:text-indigo-400 shrink-0" />
                         <span className="truncate">{t.name.length > 20 ? t.name.slice(0, 20) + "..." : t.name}</span>
                       </a>
                     ) : (
-                      <span className="flex items-center gap-1.5 text-[11px] md:text-xs font-mono font-bold text-zinc-300 border border-white/5 px-2 py-1.5 rounded-lg bg-black/40 truncate">
+                      <span className="flex items-center gap-1.5 text-[11px] md:text-xs font-mono font-bold text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-white/5 px-2 py-1.5 rounded-lg bg-zinc-50 dark:bg-black/40 truncate">
                         <span className="truncate">{t.name.length > 20 ? t.name.slice(0, 20) + "..." : t.name}</span>
                       </span>
                     )}
@@ -363,7 +363,7 @@ export function TicketSidebar({ roomId, isAdmin, activeTicketId, users }: Ticket
                   {isAdmin && (
                     <button
                       onClick={(e) => { e.stopPropagation(); handleDeleteTicket(t); }}
-                      className="flex-shrink-0 text-white/20 hover:text-rose-400 transition-colors p-1 hover:bg-rose-500/10 rounded pointer-events-auto"
+                      className="flex-shrink-0 text-zinc-400 dark:text-white/20 hover:text-rose-500 dark:hover:text-rose-400 transition-colors p-1 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded pointer-events-auto"
                       title="Delete ticket"
                     >
                       <Trash2 className="h-3 w-3" />
@@ -390,16 +390,16 @@ export function TicketSidebar({ roomId, isAdmin, activeTicketId, users }: Ticket
                         className={cn(
                           "w-12 md:w-16 text-center font-black tabular-nums border rounded-md px-1 py-0.5 focus:outline-none transition-colors",
                           t.status === "completed" 
-                            ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30 focus:border-emerald-500" 
-                            : "bg-black/40 text-white/50 border-white/10 focus:border-indigo-500 focus:text-white"
+                            ? "bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/30 focus:border-emerald-500" 
+                            : "bg-zinc-50 dark:bg-black/40 text-zinc-500 dark:text-white/50 border-zinc-200 dark:border-white/10 focus:border-indigo-500 focus:text-zinc-900 dark:focus:text-white"
                         )}
                       />
                     ) : (
                       <span className={cn(
                         "text-lg font-black tabular-nums px-3 py-0.5 rounded-lg border",
                         t.status === "completed" 
-                          ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30" 
-                          : "bg-white/5 text-white/20 border-white/5"
+                          ? "bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/30" 
+                          : "bg-zinc-100 dark:bg-white/5 text-zinc-400 dark:text-white/20 border-zinc-200 dark:border-white/5"
                       )}>
                         {t.estimate || "-"}
                       </span>

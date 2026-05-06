@@ -226,11 +226,11 @@ export function RetroBoard({
 
   return (
     <div className="flex flex-col gap-3 md:gap-4 lg:gap-8 h-full p-3 md:p-4 lg:p-6 xl:p-8 overflow-hidden">
-        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3 md:gap-4 bg-white/[0.02] border border-white/5 p-3 md:p-4 lg:p-6 rounded-[1rem] md:rounded-[1.5rem] xl:rounded-[2rem]">
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3 md:gap-4 bg-white/60 dark:bg-white/[0.02] border border-zinc-200 dark:border-white/5 p-3 md:p-4 lg:p-6 rounded-[1rem] md:rounded-[1.5rem] xl:rounded-[2rem] shadow-sm dark:shadow-none">
           <div className="flex flex-col gap-1 w-full">
-            <h2 className="text-xl md:text-2xl lg:text-3xl font-black flex flex-wrap items-center gap-2 md:gap-4 text-white tracking-tight">
+            <h2 className="text-xl md:text-2xl lg:text-3xl font-black flex flex-wrap items-center gap-2 md:gap-4 text-zinc-900 dark:text-white tracking-tight">
               Retro Session
-              <span className="text-purple-400 bg-purple-500/10 px-3 py-1 md:px-4 md:py-1 rounded-xl text-[10px] md:text-xs lg:text-sm border border-purple-500/20 shadow-lg shadow-purple-500/10 uppercase tracking-widest font-black">
+              <span className="text-purple-600 dark:text-purple-400 bg-purple-500/10 px-3 py-1 md:px-4 md:py-1 rounded-xl text-[10px] md:text-xs lg:text-sm border border-purple-500/20 shadow-lg shadow-purple-500/10 uppercase tracking-widest font-black">
                 {cards.length} INSIGHTS
               </span>
             </h2>
@@ -241,17 +241,17 @@ export function RetroBoard({
           {isAdmin && (
              <button 
               onClick={addColumn}
-              className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 py-2.5 px-4 md:py-3 md:px-6 text-xs md:text-sm font-black text-zinc-400 hover:bg-white/10 hover:text-white transition-all active:scale-95 whitespace-nowrap"
+              className="flex items-center gap-2 rounded-xl border border-zinc-200 dark:border-white/10 bg-zinc-100 dark:bg-white/5 py-2.5 px-4 md:py-3 md:px-6 text-xs md:text-sm font-black text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-white/10 hover:text-zinc-900 dark:hover:text-white transition-all active:scale-95 whitespace-nowrap"
              >
                <Plus className="h-4 w-4" />
                New Column
              </button>
           )}
           
-          <div className="flex items-center p-1 bg-white/5 rounded-xl border border-white/10">
+          <div className="flex items-center p-1 bg-zinc-100 dark:bg-white/5 rounded-xl border border-zinc-200 dark:border-white/10">
             <button 
               onClick={exportToCSV}
-              className="p-3 hover:bg-white/10 rounded-lg text-zinc-400 hover:text-white transition-all active:scale-95 tooltip"
+              className="p-3 hover:bg-zinc-200 dark:hover:bg-white/10 rounded-lg text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-all active:scale-95 tooltip"
               title="Export RAW"
             >
               <Download className="h-5 w-5" />
@@ -259,7 +259,7 @@ export function RetroBoard({
             <button 
               onClick={exportToPDF}
               disabled={isExporting}
-              className="p-3 hover:bg-white/10 rounded-lg text-zinc-400 hover:text-white transition-all active:scale-95 tooltip disabled:opacity-30"
+              className="p-3 hover:bg-zinc-200 dark:hover:bg-white/10 rounded-lg text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-all active:scale-95 tooltip disabled:opacity-30"
               title="Export PDF"
             >
               <UploadCloud className="h-5 w-5" />
@@ -279,15 +279,15 @@ export function RetroBoard({
           >
              <div className="flex items-center justify-between mb-4 lg:mb-6 px-2 lg:px-4">
                 <div className="flex items-center gap-2 lg:gap-3">
-                  <h4 className="text-base sm:text-lg lg:text-xl font-bold text-indigo-100">{col.title}</h4>
-                  <span className="bg-white/5 text-zinc-500 text-[9px] sm:text-[10px] lg:text-xs px-2 py-0.5 rounded-full border border-white/5 font-mono">
+                  <h4 className="text-base sm:text-lg lg:text-xl font-bold text-indigo-900 dark:text-indigo-100">{col.title}</h4>
+                  <span className="bg-zinc-100 dark:bg-white/5 text-zinc-600 dark:text-zinc-500 text-[9px] sm:text-[10px] lg:text-xs px-2 py-0.5 rounded-full border border-zinc-200 dark:border-white/5 font-mono">
                     {cards.filter((c) => c.columnId === col.id).length}
                   </span>
                 </div>
                 {isAdmin && (
                   <div className="flex items-center opacity-0 group-hover/col:opacity-100 transition-opacity">
-                    <button onClick={() => renameColumn(col)} className="p-1 hover:text-white text-zinc-600"><Settings className="h-3 w-3" /></button>
-                    <button onClick={() => deleteColumn(col.id)} className="p-1 hover:text-red-500 text-zinc-600"><X className="h-3 w-3" /></button>
+                    <button onClick={() => renameColumn(col)} className="p-1 hover:text-zinc-900 dark:hover:text-white text-zinc-400 dark:text-zinc-600"><Settings className="h-3 w-3" /></button>
+                    <button onClick={() => deleteColumn(col.id)} className="p-1 hover:text-red-500 text-zinc-400 dark:text-zinc-600"><X className="h-3 w-3" /></button>
                   </div>
                 )}
              </div>
@@ -315,12 +315,12 @@ export function RetroBoard({
                 ))}
                 
                 {activeColumnId === col.id ? (
-                  <div className="flex flex-col gap-3 lg:gap-4 rounded-2xl lg:rounded-3xl bg-white/[0.02] border border-white/10 p-4 lg:p-6 shadow-2xl relative overflow-hidden transition-all duration-300">
+                  <div className="flex flex-col gap-3 lg:gap-4 rounded-2xl lg:rounded-3xl bg-white dark:bg-white/[0.02] border border-zinc-200 dark:border-white/10 p-4 lg:p-6 shadow-md dark:shadow-2xl relative overflow-hidden transition-all duration-300">
                     <div className="absolute top-0 left-0 w-1 h-full bg-indigo-500/50"></div>
                     <textarea 
                       autoFocus
                       placeholder="Type your thought..."
-                      className="w-full bg-transparent border-none text-white text-sm md:text-base focus:outline-none resize-none min-h-[100px] custom-scrollbar placeholder-zinc-700"
+                      className="w-full bg-transparent border-none text-zinc-900 dark:text-white text-sm md:text-base focus:outline-none resize-none min-h-[100px] custom-scrollbar placeholder-zinc-400 dark:placeholder-zinc-700"
                       value={newCardText}
                       onChange={(e) => setNewCardText(e.target.value)}
                       onKeyDown={(e) => {
@@ -365,7 +365,7 @@ export function RetroBoard({
                       <div className="flex items-center gap-2">
                         <label 
                           title="Upload Image"
-                          className="h-10 px-4 rounded-xl transition-all flex items-center justify-center gap-2 bg-white/5 text-zinc-500 hover:text-white hover:bg-white/10 cursor-pointer active:scale-90 border border-white/5"
+                          className="h-10 px-4 rounded-xl transition-all flex items-center justify-center gap-2 bg-zinc-100 dark:bg-white/5 text-zinc-600 dark:text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-200 dark:hover:bg-white/10 cursor-pointer active:scale-90 border border-zinc-200 dark:border-white/5"
                         >
                           <UploadCloud className="h-4 w-4" />
                           <span className="text-[11px] font-black uppercase tracking-wider">Image</span>
@@ -378,7 +378,7 @@ export function RetroBoard({
                           }}
                           className={cn(
                             "h-10 px-4 rounded-xl transition-all flex items-center justify-center active:scale-90 border border-transparent",
-                            activeGifSearch === 'new' ? "bg-indigo-500 text-white shadow-lg shadow-indigo-500/20" : "bg-white/5 text-zinc-500 hover:text-white hover:bg-white/10 border-white/5"
+                            activeGifSearch === 'new' ? "bg-indigo-500 text-white shadow-lg shadow-indigo-500/20" : "bg-zinc-100 dark:bg-white/5 text-zinc-600 dark:text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-200 dark:hover:bg-white/10 border-zinc-200 dark:border-white/5"
                           )}
                         >
                           <span className="text-[11px] font-black uppercase tracking-wider">GIF</span>
@@ -392,7 +392,7 @@ export function RetroBoard({
                             setNewCardImage("");
                             setActiveGifSearch(null);
                           }}
-                          className="px-3 md:px-4 py-2 text-xs md:text-sm font-bold text-zinc-500 hover:text-white transition-all"
+                          className="px-3 md:px-4 py-2 text-xs md:text-sm font-bold text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition-all"
                         >
                           Cancel
                         </button>
@@ -411,7 +411,7 @@ export function RetroBoard({
                       setActiveColumnId(col.id);
                       setNewCardText("");
                     }}
-                    className="flex h-12 lg:h-16 items-center justify-center gap-2 lg:gap-3 rounded-xl lg:rounded-2xl border-2 border-dashed border-white/10 bg-white/[0.02] text-zinc-400 hover:border-indigo-500/50 hover:bg-indigo-500/5 hover:text-indigo-400 transition-all group active:scale-95"
+                    className="flex h-12 lg:h-16 items-center justify-center gap-2 lg:gap-3 rounded-xl lg:rounded-2xl border-2 border-dashed border-zinc-200 dark:border-white/10 bg-white/60 dark:bg-white/[0.02] text-zinc-500 dark:text-zinc-400 hover:border-indigo-500/50 hover:bg-indigo-50/50 dark:hover:bg-indigo-500/5 hover:text-indigo-600 dark:hover:text-indigo-400 transition-all group active:scale-95"
                   >
                     <Plus className="h-4 w-4 lg:h-5 lg:w-5 transition-transform group-hover:scale-125" />
                     <span className="font-bold text-xs lg:text-sm uppercase tracking-widest">Add a card</span>

@@ -61,12 +61,12 @@ export default function GifPicker({ onSelect, onClose }: GifPickerProps) {
   }, [query, searchGifs]);
 
   return (
-    <div className="flex flex-col gap-4 bg-[#161618] border border-white/10 rounded-2xl p-4 shadow-2xl w-full max-sm:fixed max-sm:inset-x-0 max-sm:bottom-0 max-sm:z-[100] max-sm:rounded-t-[2.5rem] animate-in slide-in-from-bottom-5 duration-300">
+    <div className="flex flex-col gap-4 bg-white dark:bg-[#161618] border border-zinc-200 dark:border-white/10 rounded-2xl p-4 shadow-sm dark:shadow-2xl w-full max-sm:fixed max-sm:inset-x-0 max-sm:bottom-0 max-sm:z-[100] max-sm:rounded-t-[2.5rem] animate-in slide-in-from-bottom-5 duration-300">
       <div className="flex items-center justify-between mb-2">
-        <h3 className="text-base font-bold text-white flex items-center gap-2 uppercase tracking-widest">
-          <span className="text-indigo-400">Klipy</span> Search
+        <h3 className="text-base font-bold text-zinc-900 dark:text-white flex items-center gap-2 uppercase tracking-widest">
+          <span className="text-indigo-600 dark:text-indigo-400">Klipy</span> Search
         </h3>
-        <button onClick={onClose} className="p-1 hover:bg-white/5 rounded-full text-zinc-500 hover:text-white transition-colors">
+        <button onClick={onClose} className="p-1 hover:bg-zinc-100 dark:hover:bg-white/5 rounded-full text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition-colors">
           <X className="h-4 w-4" />
         </button>
       </div>
@@ -85,7 +85,7 @@ export default function GifPicker({ onSelect, onClose }: GifPickerProps) {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search for a GIF..."
-          className="block w-full pl-10 pr-3 py-2.5 bg-black/40 border border-white/5 rounded-xl text-base text-white placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all font-medium"
+          className="block w-full pl-10 pr-3 py-2.5 bg-zinc-50 dark:bg-black/40 border border-zinc-200 dark:border-white/5 rounded-xl text-base text-zinc-900 dark:text-white placeholder-zinc-400 dark:placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all font-medium"
         />
       </div>
 
@@ -98,7 +98,7 @@ export default function GifPicker({ onSelect, onClose }: GifPickerProps) {
             <button
               key={gif.id}
               onClick={() => onSelect(gifUrl)}
-              className="relative min-h-[180px] rounded-xl overflow-hidden bg-white/5 border-2 border-transparent hover:border-indigo-500 transition-all hover:scale-[1.01] active:scale-[0.98] group shadow-xl z-0 hover:z-10"
+              className="relative min-h-[180px] rounded-xl overflow-hidden bg-zinc-100 dark:bg-white/5 border-2 border-transparent hover:border-indigo-500 transition-all hover:scale-[1.01] active:scale-[0.98] group shadow-sm dark:shadow-xl z-0 hover:z-10"
             >
               <Image
                 src={gifUrl}
@@ -128,9 +128,9 @@ export default function GifPicker({ onSelect, onClose }: GifPickerProps) {
         )}
       </div>
 
-      <div className="text-[11px] text-zinc-600 font-bold uppercase tracking-[0.2em] flex items-center justify-center gap-2 mt-1">
+      <div className="text-[11px] text-zinc-500 dark:text-zinc-600 font-bold uppercase tracking-[0.2em] flex items-center justify-center gap-2 mt-1">
         <span>Powered by</span>
-        <span className="text-white opacity-40">KLIPY</span>
+        <span className="text-zinc-900 dark:text-white opacity-40">KLIPY</span>
       </div>
     </div>
   );

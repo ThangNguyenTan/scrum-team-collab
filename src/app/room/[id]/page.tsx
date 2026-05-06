@@ -314,14 +314,14 @@ export default function RoomPage() {
 
   if (loading || (!room && !showJoinModal)) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#0a0a0b]" suppressHydrationWarning>
+      <div className="flex min-h-screen items-center justify-center bg-background" suppressHydrationWarning>
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-indigo-500 border-t-transparent" suppressHydrationWarning></div>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col h-screen bg-[#0a0a0b] text-white overflow-hidden relative" suppressHydrationWarning>
+    <div className="flex flex-col h-screen bg-background text-foreground overflow-hidden relative" suppressHydrationWarning>
       <div className="fixed inset-0 -z-10 bg-[radial-gradient(circle_at_50%_0%,rgba(67,56,202,0.08),transparent_50%)] pointer-events-none"></div>
       
       <RoomHeader 
@@ -348,7 +348,7 @@ export default function RoomPage() {
           onTransferHost={handleTransferHost}
         />
 
-        <main className="flex-1 bg-black/40 overflow-hidden relative">
+        <main className="flex-1 bg-zinc-50/50 dark:bg-black/40 overflow-hidden relative">
           {activeTab === "planning" ? (
              <PlanningBoard 
                room={room as RoomData} 

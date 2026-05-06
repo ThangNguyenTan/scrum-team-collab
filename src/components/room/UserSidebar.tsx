@@ -27,19 +27,19 @@ export function UserSidebar({
 
   return (
     <aside className={cn(
-      "border-r border-white/5 bg-[#050505]/40 flex flex-col hidden lg:flex shrink-0 transition-all duration-300 relative",
+      "border-r border-zinc-200 dark:border-white/5 bg-zinc-50/80 dark:bg-[#050505]/40 flex flex-col hidden lg:flex shrink-0 transition-all duration-300 relative",
       isCollapsed ? "w-20" : "w-64 xl:w-72"
     )}>
       {/* Toggle Button */}
       <button 
         onClick={() => setIsCollapsed(!isCollapsed)}
-        className="absolute -right-3.5 top-6 bg-zinc-900 border-white/10 border text-zinc-400 p-1.5 rounded-full z-20 hover:text-white hover:bg-zinc-800 transition-colors shadow-lg"
+        className="absolute -right-3.5 top-6 bg-white dark:bg-zinc-900 border-zinc-200 dark:border-white/10 border text-zinc-500 dark:text-zinc-400 p-1.5 rounded-full z-20 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors shadow-sm dark:shadow-lg"
       >
         {isCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
       </button>
 
       <div className={cn(
-        "p-6 border-b border-white/5 flex items-center shrink-0 bg-white/[0.01] overflow-hidden transition-all",
+        "p-6 border-b border-zinc-200 dark:border-white/5 flex items-center shrink-0 bg-white/40 dark:bg-white/[0.01] overflow-hidden transition-all",
         isCollapsed ? "justify-center px-0" : "justify-between"
       )}>
         <div className="flex items-center gap-2">
@@ -51,7 +51,7 @@ export function UserSidebar({
       <div className="flex-1 overflow-y-auto p-4 space-y-1.5 custom-scrollbar overflow-x-hidden">
         {sortedUsers.map(u => (
           <div key={u.id} className={cn(
-            "flex items-center group/u rounded-2xl hover:bg-white/[0.03] border border-transparent hover:border-white/5 transition-all duration-300 relative",
+            "flex items-center group/u rounded-2xl hover:bg-white dark:hover:bg-white/[0.03] border border-transparent hover:border-zinc-200 dark:hover:border-white/5 hover:shadow-sm dark:hover:shadow-none transition-all duration-300 relative",
             isCollapsed ? "justify-center p-2 mb-2" : "justify-between p-3"
           )}>
             <div className={cn("flex items-center gap-3", isCollapsed && "justify-center")}>
@@ -70,7 +70,7 @@ export function UserSidebar({
                 
                 {/* Minimized view indicator for Host */}
                 {isCollapsed && u.id === room?.creatorId && (
-                  <div className="absolute -bottom-1 -right-1 bg-[#050505] rounded-full p-0.5">
+                  <div className="absolute -bottom-1 -right-1 bg-white dark:bg-[#050505] rounded-full p-0.5 shadow-sm dark:shadow-none">
                     <Crown className="h-2 w-2 text-amber-500" />
                   </div>
                 )}
@@ -79,13 +79,13 @@ export function UserSidebar({
               {!isCollapsed && (
                 <div className="flex flex-col min-w-0">
                   <div className="flex items-center gap-1.5">
-                    <span className={cn("text-sm font-bold truncate tracking-tight transition-colors", u.id === user?.uid ? "text-white" : "text-zinc-400 group-hover/u:text-zinc-200")}>
+                    <span className={cn("text-sm font-bold truncate tracking-tight transition-colors", u.id === user?.uid ? "text-zinc-900 dark:text-white" : "text-zinc-500 dark:text-zinc-400 group-hover/u:text-zinc-700 dark:group-hover/u:text-zinc-200")}>
                       {u.name} {u.id === user?.uid && "(YOU)"}
                     </span>
                     {u.id === user?.uid && (
                       <button 
                         onClick={() => setShowJoinModal(true)}
-                        className="opacity-0 group-hover/u:opacity-100 p-1 rounded-md hover:bg-white/10 text-zinc-500 hover:text-white transition-all"
+                        className="opacity-0 group-hover/u:opacity-100 p-1 rounded-md hover:bg-zinc-100 dark:hover:bg-white/10 text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition-all"
                         title="Edit Name/Emoji"
                       >
                         <Settings className="h-3 w-3" />
@@ -93,9 +93,9 @@ export function UserSidebar({
                     )}
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="text-[9px] font-mono text-zinc-600">ID:{u.id.slice(0, 4)}</span>
+                    <span className="text-[9px] font-mono text-zinc-500 dark:text-zinc-600">ID:{u.id.slice(0, 4)}</span>
                     {u.group && (
-                      <span className="text-[8px] font-bold px-1.5 py-0.5 rounded bg-white/5 border border-white/5 text-zinc-500 uppercase tracking-tighter">
+                      <span className="text-[8px] font-bold px-1.5 py-0.5 rounded bg-zinc-100 dark:bg-white/5 border border-zinc-200 dark:border-white/5 text-zinc-600 dark:text-zinc-500 uppercase tracking-tighter">
                         {u.group}
                       </span>
                     )}
@@ -141,7 +141,7 @@ export function UserSidebar({
             )}
 
             {isCollapsed && u.vote && room?.status === "planning" && (
-                <div className="absolute top-1 right-1 h-2.5 w-2.5 rounded-full bg-emerald-500 border-2 border-[#050505] shadow-[0_0_8px_rgba(16,185,129,0.8)] z-10"></div>
+                <div className="absolute top-1 right-1 h-2.5 w-2.5 rounded-full bg-emerald-500 border-2 border-white dark:border-[#050505] shadow-[0_0_8px_rgba(16,185,129,0.4)] dark:shadow-[0_0_8px_rgba(16,185,129,0.8)] z-10"></div>
             )}
           </div>
         ))}

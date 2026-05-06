@@ -128,14 +128,14 @@ export default function Home() {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#0a0a0b]">
+      <div className="flex min-h-screen items-center justify-center bg-background">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-indigo-500 border-t-transparent"></div>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col min-h-screen bg-[#0a0a0b] text-white selection:bg-indigo-500/30">
+    <div className="flex flex-col min-h-screen bg-background text-foreground selection:bg-indigo-500/30">
       <LandingNavbar />
 
       {/* Hero Section */}
@@ -156,19 +156,19 @@ export default function Home() {
                 <span className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-300">Fast-Track Agile v2.0</span>
               </div>
               
-              <h1 className="text-4xl font-black tracking-tighter text-white sm:text-6xl lg:text-8xl leading-[0.95] sm:leading-[0.85] w-full px-2">
+              <h1 className="text-4xl font-black tracking-tighter text-foreground sm:text-6xl lg:text-8xl leading-[0.95] sm:leading-[0.85] w-full px-2">
                 Agile speed <br />
-                <span className="bg-gradient-to-r from-indigo-400 via-emerald-400 to-indigo-400 bg-clip-text text-transparent">redefined.</span>
+                <span className="bg-gradient-to-r from-indigo-500 via-emerald-500 to-indigo-500 dark:from-indigo-400 dark:via-emerald-400 dark:to-indigo-400 bg-clip-text text-transparent">redefined.</span>
               </h1>
               
-              <p className="max-w-xl text-lg font-medium leading-relaxed text-zinc-400 opacity-80">
+              <p className="max-w-xl text-lg font-medium leading-relaxed text-zinc-500 dark:text-zinc-400 opacity-80">
                 Eliminate friction. No signups, no seat limits. 
                 Just pure collaborative engineering for elite teams.
               </p>
             </div>
 
             <div className="w-full max-w-lg relative z-50 glass p-2 rounded-[2.5rem] shadow-2xl">
-              <form onSubmit={createRoom} className="flex flex-col gap-3 bg-[#0a0a0b] p-6 rounded-[2rem] border border-white/5">
+              <form onSubmit={createRoom} className="flex flex-col gap-3 bg-background p-6 rounded-[2rem] border border-zinc-200 dark:border-white/5">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-2 gap-1 sm:gap-0">
                   <span className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500">Creator Identity</span>
                   <span className="text-[10px] font-mono text-zinc-600">ID: {user?.uid?.slice(0, 8) || "ANON-0X"}</span>
@@ -180,8 +180,9 @@ export default function Home() {
                       type="button"
                       onClick={() => setShowEmojiPicker(!showEmojiPicker)}
                       className={cn(
-                        "h-[56px] w-[56px] sm:h-[68px] sm:w-[68px] rounded-2xl bg-zinc-900 border border-white/5 flex items-center justify-center text-2xl sm:text-3xl transition-all hover:bg-white/5 active:scale-95 shrink-0",
-                        showEmojiPicker && "ring-2 ring-indigo-500/50 border-indigo-500/30"
+                        "h-[56px] w-[56px] sm:h-[68px] sm:w-[68px] rounded-2xl bg-zinc-100 border border-zinc-200 flex items-center justify-center text-2xl sm:text-3xl transition-all hover:bg-zinc-200 active:scale-95 shrink-0",
+                        "dark:bg-zinc-900 dark:border-white/5 dark:hover:bg-white/5",
+                        showEmojiPicker && "ring-2 ring-indigo-500/50 border-indigo-500/30 dark:border-indigo-500/30"
                       )}
                     >
                       {avatar}
@@ -207,7 +208,7 @@ export default function Home() {
                       placeholder="Identify yourself..."
                       value={name}
                       onChange={(e) => setName(e.target.value)}
-                      className="w-full rounded-2xl bg-zinc-900 border border-white/5 px-4 sm:px-6 py-4 sm:py-5 text-sm sm:text-base font-bold text-white placeholder:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 transition-all duration-300"
+                      className="w-full rounded-2xl bg-zinc-100 border border-zinc-200 px-4 sm:px-6 py-4 sm:py-5 text-sm sm:text-base font-bold text-zinc-900 placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 transition-all duration-300 dark:bg-zinc-900 dark:border-white/5 dark:text-white dark:placeholder:text-zinc-600"
                     />
                     <div className="absolute right-3 sm:right-4 top-1/2 -translate-y-1/2 opacity-0 group-focus-within/field:opacity-100 transition-opacity hidden sm:block">
                       <span className="text-[9px] font-mono text-indigo-400">READY__</span>
@@ -224,7 +225,7 @@ export default function Home() {
                     onChange={(e) => setGroup(e.target.value)}
                     maxLength={15}
                     required
-                    className="w-full rounded-2xl bg-zinc-900 border border-white/5 px-4 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm font-medium text-zinc-300 placeholder:text-zinc-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 transition-all duration-300"
+                    className="w-full rounded-2xl bg-zinc-100 border border-zinc-200 px-4 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm font-medium text-zinc-900 placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 transition-all duration-300 dark:bg-zinc-900 dark:border-white/5 dark:text-zinc-300 dark:placeholder:text-zinc-700"
                   />
                   <div className="grid grid-cols-5 gap-2 mt-3">
                     {TEAM_GROUPS.map(g => (
@@ -235,8 +236,8 @@ export default function Home() {
                         className={cn(
                           "h-10 rounded-xl border text-[10px] font-bold uppercase tracking-wider transition-all flex items-center justify-center",
                           group === g 
-                            ? "bg-indigo-500/20 border-indigo-500/50 text-indigo-400" 
-                            : "bg-white/5 border-white/10 text-zinc-500 hover:text-white hover:bg-white/10 hover:border-white/20"
+                            ? "bg-indigo-500/20 border-indigo-500/50 text-indigo-600 dark:text-indigo-400" 
+                            : "bg-zinc-100 border-zinc-200 text-zinc-500 hover:text-zinc-900 hover:bg-zinc-200 hover:border-zinc-300 dark:bg-white/5 dark:border-white/10 dark:hover:text-white dark:hover:bg-white/10 dark:hover:border-white/20"
                         )}
                       >
                         {g}
@@ -248,10 +249,10 @@ export default function Home() {
                 <button 
                   type="submit"
                   disabled={creating}
-                  className="group relative h-16 w-full overflow-hidden rounded-2xl bg-white transition-all hover:scale-[1.01] active:scale-[0.98] disabled:opacity-50"
+                  className="group relative h-16 w-full overflow-hidden rounded-2xl bg-zinc-900 dark:bg-white transition-all hover:scale-[1.01] active:scale-[0.98] disabled:opacity-50"
                 >
                   <div className="absolute inset-0 bg-gradient-to-r from-indigo-500 to-purple-600 opacity-0 group-hover:opacity-10 transition-opacity duration-500"></div>
-                  <span className="relative flex items-center justify-center gap-3 text-base font-black text-black">
+                  <span className="relative flex items-center justify-center gap-3 text-base font-black text-white dark:text-black">
                     {creating ? (
                       <div className="h-5 w-5 animate-spin rounded-full border-2 border-black border-t-transparent" />
                     ) : (
@@ -276,7 +277,7 @@ export default function Home() {
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-white/5 py-12">
+      <footer className="border-t border-zinc-200 dark:border-white/5 py-12">
         <div className="mx-auto max-w-7xl px-6 text-center text-sm text-zinc-500">
           © {new Date().getFullYear()} ScrumCollab. Built for high-performance agile teams.
         </div>

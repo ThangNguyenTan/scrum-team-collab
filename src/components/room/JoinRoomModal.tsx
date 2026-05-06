@@ -59,13 +59,13 @@ export function JoinRoomModal({
     <div 
       onClick={handleBackdropClick}
       className={cn(
-        "fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-6",
+        "fixed inset-0 z-[100] flex items-center justify-center bg-zinc-500/80 dark:bg-black/80 backdrop-blur-sm p-6",
         onClose && "cursor-pointer"
       )}
     >
-      <div className="w-full max-w-sm rounded-[2rem] border border-white/10 bg-[#161618] p-8 shadow-2xl cursor-default">
-        <h2 className="text-2xl font-bold text-white mb-1">{isUpdate ? "Update Profile" : "Joining Scrum Room"}</h2>
-        <p className="text-zinc-400 text-sm mb-6">{isUpdate ? "Modify your identity for this session." : "Enter your details to get started. No account needed."}</p>
+      <div className="w-full max-w-sm rounded-[2rem] border border-zinc-200 dark:border-white/10 bg-white dark:bg-[#161618] p-8 shadow-2xl cursor-default">
+        <h2 className="text-2xl font-bold text-zinc-900 dark:text-white mb-1">{isUpdate ? "Update Profile" : "Joining Scrum Room"}</h2>
+        <p className="text-zinc-500 dark:text-zinc-400 text-sm mb-6">{isUpdate ? "Modify your identity for this session." : "Enter your details to get started. No account needed."}</p>
         <form onSubmit={(e) => {
           e.preventDefault();
           handleJoin(name, group);
@@ -76,7 +76,7 @@ export function JoinRoomModal({
                 type="button"
                 onClick={() => setShowEmojiPicker(!showEmojiPicker)}
                 className={cn(
-                  "h-14 w-14 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-2xl transition-all hover:bg-white/10 active:scale-95",
+                  "h-14 w-14 rounded-xl bg-zinc-100 dark:bg-white/5 border border-zinc-200 dark:border-white/10 flex items-center justify-center text-2xl transition-all hover:bg-zinc-200 dark:hover:bg-white/10 active:scale-95",
                   showEmojiPicker && "ring-2 ring-indigo-500/50 border-indigo-500/30"
                 )}
               >
@@ -104,12 +104,12 @@ export function JoinRoomModal({
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Display Name"
-              className="flex-1 h-14 rounded-xl bg-white/5 border border-white/10 px-4 text-white font-bold placeholder:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all"
+              className="flex-1 h-14 rounded-xl bg-zinc-100 dark:bg-white/5 border border-zinc-200 dark:border-white/10 px-4 text-zinc-900 dark:text-white font-bold placeholder:text-zinc-400 dark:placeholder:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all"
             />
           </div>
 
           <div className="space-y-2">
-            <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500 mb-1">Squad / Team Group <span className="text-rose-500">*</span></label>
+            <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-zinc-600 dark:text-zinc-500 mb-1">Squad / Team Group <span className="text-rose-500">*</span></label>
             <input 
               name="group" 
               type="text" 
@@ -118,7 +118,7 @@ export function JoinRoomModal({
               placeholder="Team Group (FE, BE, QA...)"
               maxLength={15}
               required
-              className="w-full h-12 rounded-xl bg-white/5 border border-white/10 px-4 text-white font-medium placeholder:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all text-sm"
+              className="w-full h-12 rounded-xl bg-zinc-100 dark:bg-white/5 border border-zinc-200 dark:border-white/10 px-4 text-zinc-900 dark:text-white font-medium placeholder:text-zinc-400 dark:placeholder:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all text-sm"
             />
             <div className="grid grid-cols-5 gap-2 mt-3">
               {TEAM_GROUPS.map(g => (
@@ -129,8 +129,8 @@ export function JoinRoomModal({
                   className={cn(
                     "h-10 rounded-xl border text-[10px] font-bold uppercase tracking-wider transition-all flex items-center justify-center",
                     group === g 
-                      ? "bg-indigo-500/20 border-indigo-500/50 text-indigo-400" 
-                      : "bg-white/5 border-white/10 text-zinc-500 hover:text-white hover:bg-white/10 hover:border-white/20"
+                      ? "bg-indigo-50 dark:bg-indigo-500/20 border-indigo-200 dark:border-indigo-500/50 text-indigo-600 dark:text-indigo-400" 
+                      : "bg-zinc-100 dark:bg-white/5 border-zinc-200 dark:border-white/10 text-zinc-600 dark:text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-200 dark:hover:bg-white/10 hover:border-zinc-300 dark:hover:border-white/20"
                   )}
                 >
                   {g}
@@ -141,7 +141,7 @@ export function JoinRoomModal({
 
           <button 
             type="submit" 
-            className="w-full h-14 rounded-xl bg-white text-black font-black text-lg hover:bg-zinc-200 transition-all active:scale-[0.98] shadow-xl"
+            className="w-full h-14 rounded-xl bg-zinc-900 text-white dark:bg-white dark:text-black font-black text-lg hover:bg-zinc-800 dark:hover:bg-zinc-200 transition-all active:scale-[0.98] shadow-xl"
           >
             {buttonText}
           </button>

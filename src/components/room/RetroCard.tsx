@@ -44,7 +44,7 @@ export function RetroCard({
 
   return (
     <div 
-      className="group relative flex flex-col gap-3 lg:gap-4 rounded-2xl lg:rounded-3xl bg-white/[0.03] border border-white/5 p-4 lg:p-5 xl:p-6 hover:bg-white/[0.05] hover:border-indigo-500/30 transition-all hover:translate-y-[-4px] shadow-[0_20px_40px_rgba(0,0,0,0.3)] perspective-1000"
+      className="group relative flex flex-col gap-3 lg:gap-4 rounded-2xl lg:rounded-3xl bg-white dark:bg-white/[0.03] border border-zinc-200 dark:border-white/5 p-4 lg:p-5 xl:p-6 hover:bg-zinc-50 dark:hover:bg-white/[0.05] hover:border-indigo-500/30 transition-all hover:translate-y-[-4px] shadow-sm dark:shadow-[0_20px_40px_rgba(0,0,0,0.3)] perspective-1000"
     >
       {isEditing ? (
         <div className="flex flex-col gap-3">
@@ -71,15 +71,15 @@ export function RetroCard({
 
           <textarea 
             autoFocus
-            className="w-full bg-transparent border-none text-white text-sm md:text-base focus:outline-none resize-none min-h-[80px] custom-scrollbar"
+            className="w-full bg-transparent border-none text-zinc-900 dark:text-white text-sm md:text-base focus:outline-none resize-none min-h-[80px] custom-scrollbar"
             value={editingText}
             onChange={(e) => setEditingText(e.target.value)}
           />
-           <div className="flex items-center justify-between mt-4 pt-4 border-t border-white/5">
+           <div className="flex items-center justify-between mt-4 pt-4 border-t border-zinc-200 dark:border-white/5">
               <div className="flex items-center gap-2">
                 <label 
                   title="Change Image"
-                  className="h-8 px-3 rounded-lg transition-all flex items-center justify-center gap-2 bg-white/5 text-zinc-500 hover:text-white hover:bg-white/10 cursor-pointer border border-white/5"
+                  className="h-8 px-3 rounded-lg transition-all flex items-center justify-center gap-2 bg-zinc-100 dark:bg-white/5 text-zinc-600 dark:text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-200 dark:hover:bg-white/10 cursor-pointer border border-zinc-200 dark:border-white/5"
                 >
                   <UploadCloud className="h-3.5 w-3.5" />
                   <span className="text-[10px] font-black uppercase tracking-wider">Image</span>
@@ -90,7 +90,7 @@ export function RetroCard({
                   onClick={() => setShowGifPicker(!showGifPicker)}
                   className={cn(
                     "h-8 px-3 rounded-lg transition-all flex items-center justify-center border border-transparent",
-                    showGifPicker ? "bg-indigo-500 text-white" : "bg-white/5 text-zinc-500 hover:text-white hover:bg-white/10 border-white/5"
+                    showGifPicker ? "bg-indigo-500 text-white" : "bg-zinc-100 dark:bg-white/5 text-zinc-600 dark:text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-200 dark:hover:bg-white/10 border-zinc-200 dark:border-white/5"
                   )}
                 >
                   <span className="text-[10px] font-black uppercase tracking-wider">GIF</span>
@@ -98,7 +98,7 @@ export function RetroCard({
               </div>
 
               <div className="flex items-center gap-3">
-                <button onClick={onAbortEditing} className="text-[10px] font-black text-zinc-600 uppercase tracking-widest hover:text-white transition-colors">Abort</button>
+                <button onClick={onAbortEditing} className="text-[10px] font-black text-zinc-500 dark:text-zinc-600 uppercase tracking-widest hover:text-zinc-900 dark:hover:text-white transition-colors">Abort</button>
                 <button onClick={() => onUpdateCard(card.id)} className="bg-indigo-500 text-white px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] active:scale-95 shadow-lg shadow-indigo-500/20">Sync Edit</button>
               </div>
            </div>
@@ -118,7 +118,7 @@ export function RetroCard({
       ) : (
         <>
           {card.imageUrl && (
-            <div className="w-full relative min-h-[300px] rounded-2xl overflow-hidden bg-black/40 border border-white/5 group-hover:border-white/10 transition-all duration-500 mb-1">
+            <div className="w-full relative min-h-[300px] rounded-2xl overflow-hidden bg-black/5 dark:bg-black/40 border border-zinc-200 dark:border-white/5 group-hover:border-zinc-300 dark:group-hover:border-white/10 transition-all duration-500 mb-1">
               <Image 
                 src={card.imageUrl} 
                 alt="Insight" 
@@ -128,9 +128,9 @@ export function RetroCard({
               />
             </div>
           )}
-          {card.text && <p className="text-xs sm:text-sm lg:text-[15px] xl:text-base text-zinc-200 leading-relaxed font-medium tracking-tight whitespace-pre-wrap">{card.text}</p>}
+          {card.text && <p className="text-xs sm:text-sm lg:text-[15px] xl:text-base text-zinc-800 dark:text-zinc-200 leading-relaxed font-medium tracking-tight whitespace-pre-wrap">{card.text}</p>}
           
-          <div className="flex items-center justify-between mt-2 pt-4 border-t border-white/[0.03]">
+          <div className="flex items-center justify-between mt-2 pt-4 border-t border-zinc-200 dark:border-white/[0.03]">
             <div className="flex items-center gap-2 md:gap-3">
               <div className="flex h-6 w-6 md:h-7 md:w-7 items-center justify-center rounded-lg bg-indigo-500/10 text-[9px] md:text-[10px] font-black text-indigo-400 border border-indigo-500/20 shadow-inner">
                 {card.authorAvatar ? <span className="text-xs md:text-sm">{card.authorAvatar}</span> : (card.authorName || "S").charAt(0).toUpperCase()}
@@ -143,10 +143,10 @@ export function RetroCard({
             <div className="flex items-center gap-1.5">
               {(isAdmin || card.authorName === displayName) && (
                 <div className="flex items-center opacity-0 group-hover:opacity-100 transition-all mr-2">
-                  <button onClick={() => onStartEditing(card)} className="p-2 text-zinc-600 hover:text-indigo-400 transition-colors">
+                  <button onClick={() => onStartEditing(card)} className="p-2 text-zinc-400 dark:text-zinc-600 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
                     <Edit2 className="h-3.5 w-3.5" />
                   </button>
-                  <button onClick={() => onDeleteCard(card.id)} className="p-2 text-zinc-600 hover:text-red-500 transition-colors">
+                  <button onClick={() => onDeleteCard(card.id)} className="p-2 text-zinc-400 dark:text-zinc-600 hover:text-red-500 transition-colors">
                     <Trash2 className="h-3.5 w-3.5" />
                   </button>
                 </div>
@@ -161,7 +161,7 @@ export function RetroCard({
                     : "cursor-pointer active:scale-90",
                   card.upvotes.includes(currentUserId) 
                     ? "bg-indigo-500 text-white shadow-lg shadow-indigo-500/20" 
-                    : "bg-white/5 text-zinc-500 hover:bg-white/10 hover:text-indigo-400 border border-transparent hover:border-indigo-500/20"
+                    : "bg-zinc-100 dark:bg-white/5 text-zinc-500 hover:bg-zinc-200 dark:hover:bg-white/10 hover:text-indigo-600 dark:hover:text-indigo-400 border border-transparent hover:border-indigo-500/20"
                 )}
               >
                 <ThumbsUp className={cn("h-3 w-3", card.upvotes.includes(currentUserId) ? "fill-white" : "")} />
