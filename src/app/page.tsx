@@ -66,16 +66,26 @@ export default function Home() {
 
   useEffect(() => {
     // Attempt auto-login anonymously if not logged in
+    console.log("DEBUG: useEffect running, auth is", !!auth);
     const unsubscribe = onAuthStateChanged(auth, async (u) => {
+      console.log("DEBUG: onAuthStateChanged triggered. user:", u ? u.uid : "null");
       if (!u) {
-        await signInAnonymously(auth);
+        try {
+          console.log("DEBUG: calling signInAnonymously");
+          await signInAnonymously(auth);
+          console.log("DEBUG: signInAnonymously completed successfully");
+        } catch (error) {
+          console.error("Firebase signInAnonymously failed:", error);
+        }
       } else {
+        console.log("DEBUG: User logged in, setting loading to false");
         setUser(u);
         setLoading(false);
       }
     });
 
     setTimeout(() => {
+      console.log("DEBUG: localStorage timeout running");
       const savedName = localStorage.getItem("scrum_user_name");
       if (savedName) setName(savedName);
 
@@ -88,7 +98,10 @@ export default function Home() {
       if (savedGroup) setGroup(savedGroup);
     }, 0);
 
-    return () => unsubscribe();
+    return () => {
+      console.log("DEBUG: useEffect cleanup running");
+      unsubscribe();
+    };
   }, []);
 
   const createRoom = async (e: React.FormEvent) => {

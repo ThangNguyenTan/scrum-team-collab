@@ -56,3 +56,29 @@ export const FEATURES = [
     iconStyles: "bg-emerald-500/10 text-emerald-400" 
   }
 ];
+
+export const TICKET_STATUS_ORDER: Record<string, number> = {
+  planning: 0,
+  todo: 1,
+  open: 1,
+  completed: 2,
+};
+
+export const FIBONACCI_SEQUENCE = [1, 2, 3, 5, 8, 13, 21, 34, 55, 89];
+
+export const GROUP_COLORS: Record<string, string> = {
+  FE: "border-blue-500/40 bg-blue-500/5 text-blue-400",
+  BE: "border-emerald-500/40 bg-emerald-500/5 text-emerald-400",
+  QA: "border-rose-500/40 bg-rose-500/5 text-rose-400",
+  BA: "border-amber-500/40 bg-amber-500/5 text-amber-400",
+  PM: "border-purple-500/40 bg-purple-500/5 text-purple-400",
+};
+
+export const getGroupStyles = (group?: string) => {
+  if (!group) {
+    return "border-zinc-200 bg-zinc-50 text-zinc-600 dark:border-white/5 dark:bg-white/[0.02] dark:text-zinc-500";
+  }
+  const normalized = group.toUpperCase();
+  return GROUP_COLORS[normalized] || "border-indigo-500/40 bg-indigo-500/5 text-indigo-600 dark:text-indigo-400";
+};
+

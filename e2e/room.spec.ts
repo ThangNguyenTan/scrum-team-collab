@@ -7,6 +7,7 @@ test.describe('Room E2E', () => {
     
     // Fill out the landing identity and submit to create room
     await page.getByPlaceholder('Identify yourself...').fill('Automated Scrum Master');
+    await page.getByRole('button', { name: 'FE', exact: true }).click();
     await page.getByRole('button', { name: /Initialize SCRUM_SESSION/i }).click();
 
     // After joining, wait for navigation into the room
@@ -39,6 +40,7 @@ test.describe('Room E2E', () => {
     
     // Fill out the landing identity and submit to create room
     await page.getByPlaceholder('Identify yourself...').fill('Agile Voter');
+    await page.getByRole('button', { name: 'FE', exact: true }).click();
     await page.getByRole('button', { name: /Initialize SCRUM_SESSION/i }).click();
 
     // After joining, wait for navigation into the room
@@ -63,8 +65,8 @@ test.describe('Room E2E', () => {
     // Verify proposed points calculates accurately based on the fibonacci sequence block.
     await expect(page.getByText('PROPOSED:')).toBeVisible();
 
-    // Admin should now see the "Hide Results" or "Reset Board" button
-    const resetButton = page.getByRole('button', { name: /Reset Board/i });
+    // Admin should now see the "Hide Results" or "Reset" button
+    const resetButton = page.getByRole('button', { name: /^Reset$/i });
     await expect(resetButton).toBeVisible();
   });
 
@@ -73,6 +75,7 @@ test.describe('Room E2E', () => {
     await page.goto('/');
     
     await page.getByPlaceholder('Identify yourself...').fill('Retro Historian');
+    await page.getByRole('button', { name: 'FE', exact: true }).click();
     await page.getByRole('button', { name: /Initialize SCRUM_SESSION/i }).click();
 
     // After joining, wait for navigation into the room

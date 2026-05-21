@@ -122,6 +122,7 @@ export default function RoomPage() {
       syncAuth();
     });
     return () => unsubscribe();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [roomId]); // Removed router and avatar from dependencies
 
   // Rest unchanged ...
@@ -156,6 +157,7 @@ export default function RoomPage() {
       clearInterval(heartbeat);
       window.removeEventListener("beforeunload", handleUnload);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.uid, roomId]);
 
   // Handle auto-join for creator separately from the listeners
@@ -164,8 +166,11 @@ export default function RoomPage() {
       const sessionJoined = sessionStorage.getItem(`scrum_joined_${roomId}`);
       if (!sessionJoined) {
         sessionStorage.setItem(`scrum_joined_${roomId}`, "true");
-        setUserHasJoined(true);
-        setShowJoinModal(false);
+        
+        setTimeout(() => {
+          setUserHasJoined(true);
+          setShowJoinModal(false);
+        }, 0);
         
         const creatorAvatar = avatar || localStorage.getItem("scrum_user_avatar") || EMOJIS[0];
         const creatorName = room.creatorName || displayName || localStorage.getItem("scrum_user_name") || "Creator";
@@ -180,6 +185,7 @@ export default function RoomPage() {
         }, { merge: true });
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [room?.creatorId, user?.uid, roomId]);
 
   // --- Data Listeners ---
@@ -236,7 +242,7 @@ export default function RoomPage() {
       colsSub();
       cardsSub();
     };
-  }, [roomId, activeTab]); // Minimized dependencies to prevent redundant resubscriptions
+  }, [roomId, activeTab, router]); // Minimized dependencies to prevent redundant resubscriptions
 
   const sortedUsers = useMemo(() => {
     return [...users].sort((a, b) => {

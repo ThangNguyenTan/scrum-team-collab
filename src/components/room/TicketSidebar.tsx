@@ -1,9 +1,12 @@
 import { useState, useEffect, useRef } from "react";
-import { collection, query, onSnapshot, addDoc, serverTimestamp, updateDoc, doc, writeBatch, getDocs, deleteDoc } from "firebase/firestore";
+import { collection, query, onSnapshot, addDoc, serverTimestamp, updateDoc, doc, writeBatch, deleteDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { Ticket, RoomUser } from "@/types";
-import { CheckCircle2, Eye, ExternalLink, Activity, Plus, Trash2, ChevronDown, ListTodo, ChevronRight } from "lucide-react";
+import { Plus, ListTodo, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { TICKET_STATUS_ORDER } from "@/constants";
+import { TicketCard } from "./TicketCard";
+import { TicketAddForm } from "./TicketAddForm";
 
 interface TicketSidebarProps {
   roomId: string;
@@ -33,9 +36,8 @@ export function TicketSidebar({ roomId, isAdmin, activeTicketId, users }: Ticket
       
       fetched.sort((a, b) => {
         if (sortOrder === 'status') {
-          const statusOrder = { 'planning': 0, 'todo': 1, 'open': 1, 'completed': 2 };
-          const aS = statusOrder[a.status as keyof typeof statusOrder] ?? 1;
-          const bS = statusOrder[b.status as keyof typeof statusOrder] ?? 1;
+          const aS = TICKET_STATUS_ORDER[a.status] ?? 1;
+          const bS = TICKET_STATUS_ORDER[b.status] ?? 1;
           if (aS !== bS) return aS - bS;
         }
 
@@ -68,7 +70,6 @@ export function TicketSidebar({ roomId, isAdmin, activeTicketId, users }: Ticket
     setNewTicketLink("");
     setShowAddForm(false);
 
-    // If we're sorting by oldest, newest tickets are at the bottom. Scroll there.
     if (sortOrder === 'oldest') {
       setTimeout(() => {
         const container = scrollRef.current;
@@ -85,20 +86,17 @@ export function TicketSidebar({ roomId, isAdmin, activeTicketId, users }: Ticket
     const batch = writeBatch(db);
     
     if (newStatus === "planning") {
-      // Revert existing planning tickets
       const currentPlanning = tickets.filter(t => t.status === "planning" && t.id !== ticket.id);
       currentPlanning.forEach(t => {
         if (t.id) batch.update(doc(db, "rooms", roomId, "tickets", t.id), { status: "todo" });
       });
       
-      // Update room state
       batch.update(doc(db, "rooms", roomId), {
         activeTicketId: ticket.id,
         currentTicket: ticket.name,
         revealed: false
       });
       
-      // Clear user votes using the users prop we already have
       if (users && users.length > 0) {
         users.forEach(u => batch.update(doc(db, "rooms", roomId, "users", u.id), { vote: null }));
       }
@@ -145,13 +143,11 @@ export function TicketSidebar({ roomId, isAdmin, activeTicketId, users }: Ticket
 
     let newOrder = 0;
     if (sourceIdx < targetIdx) {
-      // Moving down
       const afterTarget = tickets[targetIdx + 1];
       const targetOrder = typeof targetTicket.order === 'number' ? targetTicket.order : (targetTicket.createdAt?.toMillis?.() || 0);
       const afterOrder = afterTarget ? (typeof afterTarget.order === 'number' ? afterTarget.order : (afterTarget.createdAt?.toMillis?.() || 0)) : targetOrder - 1000;
       newOrder = (targetOrder + afterOrder) / 2;
     } else {
-      // Moving up
       const beforeTarget = tickets[targetIdx - 1];
       const targetOrder = typeof targetTicket.order === 'number' ? targetTicket.order : (targetTicket.createdAt?.toMillis?.() || 0);
       const beforeOrder = beforeTarget ? (typeof beforeTarget.order === 'number' ? beforeTarget.order : (beforeTarget.createdAt?.toMillis?.() || 0)) : targetOrder + 1000;
@@ -214,7 +210,7 @@ export function TicketSidebar({ roomId, isAdmin, activeTicketId, users }: Ticket
               <div className="relative group/sort">
                 <select
                   value={sortOrder}
-                  onChange={(e) => setSortOrder(e.target.value as any)}
+                  onChange={(e) => setSortOrder(e.target.value as typeof sortOrder)}
                   className="appearance-none bg-white dark:bg-black/60 border border-zinc-200 dark:border-white/10 rounded-lg px-2 py-2 text-[10px] font-black uppercase tracking-widest text-zinc-600 dark:text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:border-zinc-300 dark:hover:border-white/20 transition-all focus:outline-none cursor-pointer"
                   title="Sort Order"
                 >
@@ -239,175 +235,63 @@ export function TicketSidebar({ roomId, isAdmin, activeTicketId, users }: Ticket
               )}
             </div>
 
-            {showAddForm && isAdmin && (
-              <form onSubmit={handleAddTicket} className="flex flex-col gap-2 p-3 bg-white dark:bg-white/5 border border-zinc-200 dark:border-white/10 rounded-xl mt-1 shadow-sm dark:shadow-none">
-                <input
-                  type="text"
-                  placeholder="Ticket ID (max 20 chars)"
-                  maxLength={20}
-                  value={newTicketName}
-                  onChange={(e) => setNewTicketName(e.target.value)}
-                  className="w-full bg-zinc-50 dark:bg-black/40 border border-zinc-200 dark:border-white/5 rounded-md px-3 py-1.5 text-sm text-zinc-900 dark:text-white focus:outline-none focus:border-indigo-500/30"
-                  required
-                />
-                <input
-                  type="url"
-                  placeholder="Link URL (optional)"
-                  value={newTicketLink}
-                  onChange={(e) => setNewTicketLink(e.target.value)}
-                  className="w-full bg-zinc-50 dark:bg-black/40 border border-zinc-200 dark:border-white/5 rounded-md px-3 py-1.5 text-sm text-zinc-900 dark:text-white focus:outline-none focus:border-indigo-500/30"
-                />
-                <div className="flex justify-end mt-1">
-                  <button 
-                    type="submit"
-                    className="px-4 py-1.5 bg-indigo-500 text-white text-xs font-bold rounded-lg hover:bg-indigo-600 transition-colors"
-                    disabled={!newTicketName.trim()}
-                  >
-                    Add Ticket
-                  </button>
-                </div>
-              </form>
-            )}
+            <TicketAddForm
+              newTicketName={newTicketName}
+              newTicketLink={newTicketLink}
+              onChangeName={setNewTicketName}
+              onChangeLink={setNewTicketLink}
+              onSubmit={handleAddTicket}
+              isAdmin={isAdmin && showAddForm}
+            />
           </div>
 
           <div 
             ref={scrollRef}
             className="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-2 scroll-smooth"
           >
-            {filteredTickets.map((t) => (
-              <div
-                key={t.id}
-                draggable={isAdmin && t.status !== "completed"}
-                onDragStart={(e) => {
-                  if (!isAdmin || t.status === "completed") return;
-                  setDraggedId(t.id!);
-                  e.dataTransfer.effectAllowed = "move";
-                }}
-                onDragOver={(e) => {
-                  e.preventDefault(); // Must prevent default to allow drop
-                  if (!isAdmin || draggedId === t.id) return;
-                  setDropTargetId(t.id!);
-                }}
-                onDragLeave={() => setDropTargetId(null)}
-                onDrop={(e) => handleDrop(e, t)}
-                onDragEnd={() => {
-                  setDraggedId(null);
-                  setDropTargetId(null);
-                }}
-                onClick={() => {
-                  if (!isAdmin) return;
-                  if (t.status === "todo" || t.status === "open") {
-                    handleStatusChange(t, "planning");
-                  } else if (t.status === "planning") {
-                    handleStatusChange(t, "completed");
-                  }
-                }}
-                className={cn(
-                  "w-full flex flex-col gap-3 p-3 rounded-xl border transition-all text-left shadow-sm dark:shadow-none",
-                  isAdmin && t.status !== "completed" ? "cursor-grab active:cursor-grabbing hover:bg-zinc-100 dark:hover:bg-white/10" : "",
-                  t.status === "planning"
-                    ? "bg-indigo-50/50 dark:bg-indigo-500/5 border-indigo-200 dark:border-indigo-500/30 shadow-[0_0_15px_rgba(99,102,241,0.05)]"
-                    : "bg-white dark:bg-white/[0.02] border-zinc-200 dark:border-white/5",
-                  t.status === "completed" && "opacity-60",
-                  draggedId === t.id && "opacity-30 border-dashed border-indigo-500/50",
-                  dropTargetId === t.id && (tickets.findIndex(x => x.id === draggedId) < tickets.findIndex(x => x.id === t.id) ? "border-b-4 border-b-indigo-500" : "border-t-4 border-t-indigo-500")
-                )}
-              >
-                <div className="flex items-center justify-between w-full pointer-events-none">
-                  <div className="flex items-center gap-2 overflow-hidden w-full pr-2 pointer-events-auto">
-                    {isAdmin ? (
-                      <div className="relative shrink-0">
-                        <select
-                          onClick={(e) => e.stopPropagation()}
-                          value={t.status === "open" ? "todo" : t.status}
-                          onChange={(e) => handleStatusChange(t, e.target.value)}
-                          className={cn(
-                            "appearance-none text-[10px] md:text-xs font-black uppercase tracking-wider pl-3 pr-7 py-1.5 rounded-lg bg-zinc-50 dark:bg-black/40 border cursor-pointer focus:border-indigo-500/50 focus:outline-none transition-colors",
-                            t.status === "completed" ? "border-emerald-200 dark:border-emerald-500/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-500/10" :
-                            t.status === "planning" ? "border-indigo-200 dark:border-indigo-500/30 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-500/10" :
-                            "border-zinc-200 dark:border-white/10 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-white/5"
-                          )}
-                        >
-                          <option className="bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-300 font-bold" value="todo">Todo</option>
-                          <option className="bg-white dark:bg-zinc-900 text-indigo-600 dark:text-indigo-400 font-bold" value="planning">Planning</option>
-                          <option className="bg-white dark:bg-zinc-900 text-emerald-600 dark:text-emerald-400 font-bold" value="completed">Completed</option>
-                        </select>
-                        <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 h-3 w-3 pointer-events-none opacity-50" />
-                      </div>
-                    ) : (
-                      <span className={cn(
-                        "flex shrink-0 items-center gap-1.5 px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider",
-                        t.status === "completed" ? "bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20" :
-                        t.status === "planning" ? "bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-500/20" :
-                        "bg-zinc-100 dark:bg-white/5 text-zinc-500 dark:text-zinc-400 border border-zinc-200 dark:border-white/5"
-                      )}>
-                        {t.status === "completed" && <CheckCircle2 className="h-3 w-3" />}
-                        {t.status === "planning" && <Activity className="h-3 w-3 animate-pulse" />}
-                        {(t.status === "todo" || t.status === "open") && <Eye className="h-3 w-3" />}
-                        {t.status === "open" ? "TODO" : t.status}
-                      </span>
-                    )}
-                    
-                    {t.link ? (
-                      <a href={t.link} target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()} className="flex items-center gap-1.5 text-[11px] md:text-xs font-mono font-bold text-indigo-600 dark:text-indigo-300 border border-zinc-200 dark:border-white/5 hover:border-indigo-300 dark:hover:border-indigo-500/30 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 hover:text-indigo-700 dark:hover:text-indigo-200 px-2 py-1.5 rounded-lg bg-zinc-50 dark:bg-black/40 transition-colors truncate">
-                        <ExternalLink className="h-3.5 w-3.5 text-indigo-500 dark:text-indigo-400 shrink-0" />
-                        <span className="truncate">{t.name.length > 20 ? t.name.slice(0, 20) + "..." : t.name}</span>
-                      </a>
-                    ) : (
-                      <span className="flex items-center gap-1.5 text-[11px] md:text-xs font-mono font-bold text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-white/5 px-2 py-1.5 rounded-lg bg-zinc-50 dark:bg-black/40 truncate">
-                        <span className="truncate">{t.name.length > 20 ? t.name.slice(0, 20) + "..." : t.name}</span>
-                      </span>
-                    )}
-                  </div>
+            {filteredTickets.map((t) => {
+              const sourceIdx = tickets.findIndex(x => x.id === draggedId);
+              const targetIdx = tickets.findIndex(x => x.id === t.id);
+              const isBeforeInList = sourceIdx < targetIdx;
 
-                  {isAdmin && (
-                    <button
-                      onClick={(e) => { e.stopPropagation(); handleDeleteTicket(t); }}
-                      className="flex-shrink-0 text-zinc-400 dark:text-white/20 hover:text-rose-500 dark:hover:text-rose-400 transition-colors p-1 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded pointer-events-auto"
-                      title="Delete ticket"
-                    >
-                      <Trash2 className="h-3 w-3" />
-                    </button>
-                  )}
-                </div>
-
-                <div className="flex justify-between items-center w-full mt-1">
-                  <div className="text-[10px] text-zinc-500 font-medium">
-                    {t.votesAtCompletion !== undefined && t.totalUsersAtCompletion !== undefined && (
-                      <span>{t.votesAtCompletion}/{t.totalUsersAtCompletion} <span className="opacity-70">users</span></span>
-                    )}
-                  </div>
-                  
-                  <div className="flex items-center gap-2">
-                    <span className="text-[9px] uppercase tracking-widest font-black text-zinc-600">EST:</span>
-                    {isAdmin ? (
-                      <input
-                        type="text"
-                        onClick={(e) => e.stopPropagation()}
-                        value={t.estimate || ""}
-                        onChange={(e) => handleEstimateChange(t, e.target.value)}
-                        placeholder="-"
-                        className={cn(
-                          "w-12 md:w-16 text-center font-black tabular-nums border rounded-md px-1 py-0.5 focus:outline-none transition-colors",
-                          t.status === "completed" 
-                            ? "bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/30 focus:border-emerald-500" 
-                            : "bg-zinc-50 dark:bg-black/40 text-zinc-500 dark:text-white/50 border-zinc-200 dark:border-white/10 focus:border-indigo-500 focus:text-zinc-900 dark:focus:text-white"
-                        )}
-                      />
-                    ) : (
-                      <span className={cn(
-                        "text-lg font-black tabular-nums px-3 py-0.5 rounded-lg border",
-                        t.status === "completed" 
-                          ? "bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/30" 
-                          : "bg-zinc-100 dark:bg-white/5 text-zinc-400 dark:text-white/20 border-zinc-200 dark:border-white/5"
-                      )}>
-                        {t.estimate || "-"}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ))}
+              return (
+                <TicketCard
+                  key={t.id}
+                  ticket={t}
+                  isAdmin={isAdmin}
+                  draggedId={draggedId}
+                  dropTargetId={dropTargetId}
+                  onDragStart={(e) => {
+                    if (!isAdmin || t.status === "completed") return;
+                    setDraggedId(t.id!);
+                    e.dataTransfer.effectAllowed = "move";
+                  }}
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    if (!isAdmin || draggedId === t.id) return;
+                    setDropTargetId(t.id!);
+                  }}
+                  onDragLeave={() => setDropTargetId(null)}
+                  onDrop={(e) => handleDrop(e, t)}
+                  onDragEnd={() => {
+                    setDraggedId(null);
+                    setDropTargetId(null);
+                  }}
+                  onClick={() => {
+                    if (!isAdmin) return;
+                    if (t.status === "todo" || t.status === "open") {
+                      handleStatusChange(t, "planning");
+                    } else if (t.status === "planning") {
+                      handleStatusChange(t, "completed");
+                    }
+                  }}
+                  onStatusChange={(status) => handleStatusChange(t, status)}
+                  onEstimateChange={(estimate) => handleEstimateChange(t, estimate)}
+                  onDelete={() => handleDeleteTicket(t)}
+                  isBeforeInList={isBeforeInList}
+                />
+              );
+            })}
             {filteredTickets.length === 0 && (
               <div className="text-center py-8 text-zinc-500 text-sm">
                 {searchQuery ? "No tickets match your search." : isAdmin ? "Click + to add your first ticket." : "No tickets available."}
