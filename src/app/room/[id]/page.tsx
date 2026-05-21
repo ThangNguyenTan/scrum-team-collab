@@ -18,12 +18,16 @@ import {
   addDoc,
   deleteDoc,
   getDocs,
-  updateDoc
+  updateDoc,
+  limit
 } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
 import { copyToClipboard } from "@/lib/utils";
 import { RoomData, RoomUser, RetroColumn, RetroCard } from "@/types";
 import { EMOJIS } from "@/constants";
+import { playTada, playSuccess, playFail, playPing } from "@/lib/audioSynth";
+import { ReactionOverlay } from "@/components/room/ReactionOverlay";
+import { ReactionsPanel } from "@/components/room/ReactionsPanel";
 
 // Extracted Components
 import { PlanningBoard } from "@/components/room/PlanningBoard";
@@ -244,6 +248,42 @@ export default function RoomPage() {
     };
   }, [roomId, activeTab, router]); // Minimized dependencies to prevent redundant resubscriptions
 
+  // --- Real-time Synchronized Soundboard listener ---
+  useEffect(() => {
+    if (!roomId) return;
+    const startTimestamp = Date.now() - 3000; // 3-second buffer to ignore older sounds on join
+    const processedIds = new Set<string>();
+
+    const q = query(
+      collection(db, "rooms", roomId, "sounds"),
+      orderBy("createdAt", "desc"),
+      limit(5)
+    );
+
+    const unsub = onSnapshot(q, (snapshot) => {
+      snapshot.docChanges().forEach((change) => {
+        if (change.type === "added") {
+          const data = change.doc.data();
+          const docId = change.doc.id;
+
+          if (processedIds.has(docId)) return;
+          processedIds.add(docId);
+
+          const createdAt = data.createdAt?.toMillis ? data.createdAt.toMillis() : Date.now();
+          if (createdAt > startTimestamp) {
+            const soundType = data.soundType;
+            if (soundType === "tada") playTada();
+            else if (soundType === "success") playSuccess();
+            else if (soundType === "fail") playFail();
+            else if (soundType === "ping") playPing();
+          }
+        }
+      });
+    });
+
+    return () => unsub();
+  }, [roomId]);
+
   const sortedUsers = useMemo(() => {
     return [...users].sort((a, b) => {
       if (a.id === room?.creatorId) return -1;
@@ -330,6 +370,9 @@ export default function RoomPage() {
     <div className="flex flex-col h-screen bg-background text-foreground overflow-hidden relative" suppressHydrationWarning>
       <div className="fixed inset-0 -z-10 bg-[radial-gradient(circle_at_50%_0%,rgba(67,56,202,0.08),transparent_50%)] pointer-events-none"></div>
       
+      {/* Floating live reaction overlay */}
+      <ReactionOverlay roomId={roomId} />
+      
       <RoomHeader 
         roomId={roomId}
         activeTab={activeTab}
@@ -390,6 +433,15 @@ export default function RoomPage() {
           setShowEmojiPicker={setShowEmojiPicker}
           handleJoin={handleJoin}
           onClose={userHasJoined ? () => setShowJoinModal(false) : undefined}
+        />
+      )}
+
+      {/* Floating control dock for reactions & sounds */}
+      {user && (
+        <ReactionsPanel 
+          roomId={roomId} 
+          senderId={user.uid} 
+          senderName={displayName} 
         />
       )}
     </div>

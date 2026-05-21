@@ -64,3 +64,21 @@ export interface Feature {
   styles: string;
   iconStyles: string;
 }
+
+export interface ReactionEvent {
+  id?: string;
+  emoji: string;
+  senderId: string;
+  senderName: string;
+  xOffset: number;
+  createdAt: FirestoreTimestamp;
+}
+
+export interface SoundEvent {
+  id?: string;
+  soundType: "tada" | "success" | "fail" | "ping";
+  senderId: string;
+  senderName: string;
+  createdAt: FirestoreTimestamp;
+}
+

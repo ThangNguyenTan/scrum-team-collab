@@ -7,6 +7,7 @@ interface TicketAddFormProps {
   onChangeLink: (val: string) => void;
   onSubmit: (e: React.FormEvent) => void;
   isAdmin: boolean;
+  autoFocusName?: boolean; // optional auto‑focus for testing
 }
 
 export function TicketAddForm({
@@ -16,6 +17,7 @@ export function TicketAddForm({
   onChangeLink,
   onSubmit,
   isAdmin,
+  autoFocusName = false,
 }: TicketAddFormProps) {
   if (!isAdmin) return null;
 
@@ -32,6 +34,7 @@ export function TicketAddForm({
         onChange={(e) => onChangeName(e.target.value)}
         className="w-full bg-zinc-50 dark:bg-black/40 border border-zinc-200 dark:border-white/5 rounded-md px-3 py-1.5 text-sm text-zinc-900 dark:text-white focus:outline-none focus:border-indigo-500/30"
         required
+        autoFocus={autoFocusName}
       />
       <input
         type="url"

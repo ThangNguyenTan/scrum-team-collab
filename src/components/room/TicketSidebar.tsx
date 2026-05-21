@@ -224,10 +224,12 @@ export function TicketSidebar({ roomId, isAdmin, activeTicketId, users }: Ticket
 
               {isAdmin && (
                 <button 
-                  onClick={() => setShowAddForm(!showAddForm)}
+                  onClick={() => setShowAddForm(true)} 
                   className={cn(
                     "flex-shrink-0 w-10 h-10 flex items-center justify-center border rounded-lg transition-colors",
-                    showAddForm ? "bg-indigo-50 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 border-indigo-200 dark:border-indigo-500/50" : "bg-white dark:bg-black/60 border-zinc-200 dark:border-white/10 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
+                    showAddForm
+                      ? "bg-indigo-50 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 border-indigo-200 dark:border-indigo-500/50"
+                      : "bg-white dark:bg-black/60 border-zinc-200 dark:border-white/10 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
                   )}
                 >
                   <Plus className="h-4 w-4" />
@@ -242,6 +244,7 @@ export function TicketSidebar({ roomId, isAdmin, activeTicketId, users }: Ticket
               onChangeLink={setNewTicketLink}
               onSubmit={handleAddTicket}
               isAdmin={isAdmin && showAddForm}
+              autoFocusName={showAddForm}
             />
           </div>
 
