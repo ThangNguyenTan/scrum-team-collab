@@ -4,6 +4,7 @@ import { useRef, useState, useEffect } from "react";
 import EmojiPicker, { Theme } from "emoji-picker-react";
 import { cn } from "@/lib/utils";
 import { TEAM_GROUPS } from "@/constants";
+import { DraggableEmojiPicker } from "./DraggableEmojiPicker";
 
 interface JoinRoomModalProps {
   avatar: string;
@@ -84,7 +85,7 @@ export function JoinRoomModal({
               </button>
 
               {showEmojiPicker && (
-                <div className="absolute bottom-16 left-0 z-[100] shadow-[0_20px_50px_rgba(0,0,0,0.5)] animate-in fade-in slide-in-from-bottom-2 duration-200">
+                <DraggableEmojiPicker defaultClassName="top-16 left-0 animate-in fade-in slide-in-from-top-2 duration-200">
                   <EmojiPicker 
                     onEmojiClick={(emojiData) => {
                       setAvatar(emojiData.emoji);
@@ -92,7 +93,7 @@ export function JoinRoomModal({
                     }}
                     theme={Theme.AUTO}
                   />
-                </div>
+                </DraggableEmojiPicker>
               )}
             </div>
 

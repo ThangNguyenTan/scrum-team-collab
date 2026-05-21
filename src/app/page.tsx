@@ -19,6 +19,7 @@ import EmojiPicker, { Theme } from "emoji-picker-react";
 import { EMOJIS, FEATURES, TEAM_GROUPS } from "@/constants";
 import { LandingNavbar } from "@/components/landing/LandingNavbar";
 import { FeatureCard } from "@/components/landing/FeatureCard";
+import { DraggableEmojiPicker } from "@/components/room/DraggableEmojiPicker";
 
 export default function Home() {
   const [user, setUser] = useState<User | null>(null);
@@ -202,7 +203,7 @@ export default function Home() {
                     </button>
 
                     {showEmojiPicker && (
-                      <div className="absolute top-20 left-0 z-[100] shadow-[0_20px_50px_rgba(0,0,0,0.5)] animate-in fade-in zoom-in duration-200">
+                      <DraggableEmojiPicker defaultClassName="top-20 left-0 animate-in fade-in zoom-in duration-200">
                         <EmojiPicker 
                           onEmojiClick={(emojiData) => {
                             setAvatar(emojiData.emoji);
@@ -210,7 +211,7 @@ export default function Home() {
                           }}
                           theme={Theme.AUTO}
                         />
-                      </div>
+                      </DraggableEmojiPicker>
                     )}
                   </div>
 
