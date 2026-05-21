@@ -7,27 +7,22 @@ import { ANIMAL_MAPPING } from "@/constants";
 interface PlanningCardProps {
   card: string;
   myVote: string | null;
-  revealed: boolean;
   onClick: () => void;
 }
 
-export function PlanningCard({ card, myVote, revealed, onClick }: PlanningCardProps) {
+export function PlanningCard({ card, myVote, onClick }: PlanningCardProps) {
   const animal = ANIMAL_MAPPING[card];
 
   return (
     <button
       onClick={onClick}
-      disabled={revealed}
       className={cn(
         "flex flex-col items-center justify-center h-16 w-12 sm:h-20 sm:w-14 lg:h-24 lg:w-16 xl:h-32 xl:w-24 2xl:h-40 2xl:w-28 rounded-xl lg:rounded-2xl 2xl:rounded-[2rem] transition-all group relative",
         myVote === card
           ? "bg-indigo-500 border-[3px] border-indigo-400 scale-110 shadow-[0_20px_60px_rgba(99,102,241,0.4)] z-20"
           : "bg-white dark:bg-black/60 border border-zinc-200 dark:border-white/10 shadow-sm",
-        !revealed &&
-          myVote !== card &&
-          "hover:border-zinc-300 dark:hover:border-white/40 hover:bg-zinc-50 dark:hover:bg-white/10 hover:-translate-y-3 active:scale-95",
-        revealed && myVote !== card && "opacity-20 cursor-not-allowed",
-        revealed && myVote === card && "cursor-not-allowed"
+        myVote !== card &&
+          "hover:border-zinc-300 dark:hover:border-white/40 hover:bg-zinc-50 dark:hover:bg-white/10 hover:-translate-y-3 active:scale-95"
       )}
     >
       {/* Animal Backdrop Wrapper with Overflow Hidden and Safari Webkit fix */}

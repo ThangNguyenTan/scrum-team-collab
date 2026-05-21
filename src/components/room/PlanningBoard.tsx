@@ -46,7 +46,7 @@ export function PlanningBoard({ room, roomId, users, isAdmin, currentUserId }: P
   }, [users, activeGroup]);
 
   const handleVote = async (value: string) => {
-    if (!currentUserId || room.revealed) return;
+    if (!currentUserId) return;
     await setDoc(doc(db, "rooms", roomId, "users", currentUserId), {
       vote: value === myVote ? null : value
     }, { merge: true });
@@ -288,7 +288,6 @@ export function PlanningBoard({ room, roomId, users, isAdmin, currentUserId }: P
                 <PlanningCard
                   card={card}
                   myVote={myVote || null}
-                  revealed={room.revealed}
                   onClick={() => handleVote(card)}
                 />
               </div>
