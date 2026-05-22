@@ -11,12 +11,12 @@ import {
   arrayRemove 
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { 
+import {
   Plus, 
   Download, 
   Settings, 
   X, 
-  UploadCloud 
+  FileDown 
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import jsPDF from "jspdf";
@@ -262,7 +262,7 @@ export function RetroBoard({
               className="p-3 hover:bg-zinc-200 dark:hover:bg-white/10 rounded-lg text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-all active:scale-95 tooltip disabled:opacity-30"
               title="Export PDF"
             >
-              <UploadCloud className="h-5 w-5" />
+              <FileDown className="h-5 w-5" />
             </button>
           </div>
         </div>
