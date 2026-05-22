@@ -28,6 +28,9 @@ import { EMOJIS } from "@/constants";
 import { playTada, playSuccess, playFail, playPing } from "@/lib/audioSynth";
 import { ReactionOverlay } from "@/components/room/ReactionOverlay";
 import { ReactionsPanel } from "@/components/room/ReactionsPanel";
+import { ExportModal } from "@/components/room/ExportModal";
+import { generateMeetingSummary } from "@/lib/exportUtils";
+import { Ticket } from "@/types";
 
 // Extracted Components
 import { PlanningBoard } from "@/components/room/PlanningBoard";
@@ -57,6 +60,9 @@ export default function RoomPage() {
   const [idCopyFeedback, setIdCopyFeedback] = useState(false);
   const [inviteFeedback, setInviteFeedback] = useState(false);
   const [userHasJoined, setUserHasJoined] = useState(false);
+  
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [exportMarkdown, setExportMarkdown] = useState("");
 
   const isAdmin = useMemo(() => user?.uid === room?.creatorId, [user, room]);
 
@@ -358,6 +364,26 @@ export default function RoomPage() {
     }
   };
 
+  const handleExport = async () => {
+    if (!roomId) return;
+    
+    // Fetch all tickets
+    const ticketsSnap = await getDocs(query(collection(db, "rooms", roomId, "tickets")));
+    const allTickets = ticketsSnap.docs.map(d => ({ id: d.id, ...d.data() } as Ticket));
+    
+    // Fetch all columns
+    const colsSnap = await getDocs(query(collection(db, "rooms", roomId, "columns")));
+    const allColumns = colsSnap.docs.map(d => ({ id: d.id, ...d.data() } as RetroColumn));
+    
+    // Fetch all cards
+    const cardsSnap = await getDocs(query(collection(db, "rooms", roomId, "cards")));
+    const allCards = cardsSnap.docs.map(d => ({ id: d.id, ...d.data() } as RetroCard));
+    
+    const markdown = generateMeetingSummary(allTickets, allColumns, allCards);
+    setExportMarkdown(markdown);
+    setShowExportModal(true);
+  };
+
   if (loading || (!room && !showJoinModal)) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background" suppressHydrationWarning>
@@ -384,6 +410,7 @@ export default function RoomPage() {
         inviteFeedback={inviteFeedback}
         setInviteFeedback={setInviteFeedback}
         onLogoClick={() => router.push("/")}
+        onExportClick={handleExport}
       />
 
       <div className="flex flex-1 overflow-hidden">
@@ -442,6 +469,13 @@ export default function RoomPage() {
           roomId={roomId} 
           senderId={user.uid} 
           senderName={displayName} 
+        />
+      )}
+
+      {showExportModal && (
+        <ExportModal 
+          markdown={exportMarkdown} 
+          onClose={() => setShowExportModal(false)} 
         />
       )}
     </div>

@@ -1,4 +1,4 @@
-import { Zap, Copy, CheckCircle2, Share2 } from "lucide-react";
+import { Zap, Copy, CheckCircle2, Share2, FileText } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { RoomUser } from "@/types";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -14,6 +14,7 @@ interface RoomHeaderProps {
   inviteFeedback: boolean;
   setInviteFeedback: (v: boolean) => void;
   onLogoClick: () => void;
+  onExportClick: () => void;
 }
 
 export function RoomHeader({
@@ -26,7 +27,8 @@ export function RoomHeader({
   setIdCopyFeedback,
   inviteFeedback,
   setInviteFeedback,
-  onLogoClick
+  onLogoClick,
+  onExportClick
 }: RoomHeaderProps) {
   return (
     <header className="h-16 flex items-center justify-between px-3 sm:px-6 border-b border-zinc-200 dark:border-white/5 bg-white/60 dark:bg-black/60 backdrop-blur-xl shrink-0 z-50">
@@ -99,6 +101,16 @@ export function RoomHeader({
             </>
           )}
         </button>
+
+        <button
+          title="Export Meeting Summary"
+          onClick={onExportClick}
+          className="flex items-center gap-2 rounded-xl bg-indigo-500 hover:bg-indigo-600 text-white px-3 sm:px-4 py-2 text-xs sm:text-base font-semibold transition-all active:scale-95"
+        >
+          <FileText className="h-3 w-3 sm:h-4 sm:w-4" />
+          <span className="hidden sm:inline">Export</span>
+        </button>
+
         <ThemeToggle />
       </div>
     </header>
