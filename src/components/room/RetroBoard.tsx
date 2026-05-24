@@ -16,7 +16,8 @@ import {
   Download, 
   Settings, 
   X, 
-  FileDown 
+  FileDown,
+  UploadCloud
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import jsPDF from "jspdf";

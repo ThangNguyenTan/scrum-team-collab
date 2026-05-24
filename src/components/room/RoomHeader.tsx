@@ -2,6 +2,7 @@ import { Zap, Copy, CheckCircle2, Share2, FileText } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { RoomUser } from "@/types";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { FocusMusicPlayer } from "@/components/room/FocusMusicPlayer";
 
 interface RoomHeaderProps {
   roomId: string;
@@ -110,6 +111,8 @@ export function RoomHeader({
           <FileText className="h-3 w-3 sm:h-4 sm:w-4" />
           <span className="hidden sm:inline">Export</span>
         </button>
+
+        <FocusMusicPlayer />
 
         <ThemeToggle />
       </div>
