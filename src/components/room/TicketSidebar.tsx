@@ -80,6 +80,42 @@ export function TicketSidebar({ roomId, isAdmin, activeTicketId, users }: Ticket
     }
   };
 
+  const handleBulkAddTickets = async (parsedTickets: { name: string; link?: string }[]) => {
+    if (!isAdmin || !roomId || parsedTickets.length === 0) return;
+
+    const chunkSize = 500;
+    const baseTime = Date.now();
+
+    for (let i = 0; i < parsedTickets.length; i += chunkSize) {
+      const chunk = parsedTickets.slice(i, i + chunkSize);
+      const batch = writeBatch(db);
+
+      chunk.forEach((t, idx) => {
+        const ticketRef = doc(collection(db, "rooms", roomId, "tickets"));
+        batch.set(ticketRef, {
+          name: t.name,
+          link: t.link || "",
+          status: "todo",
+          order: baseTime + i + idx,
+          createdAt: serverTimestamp(),
+        });
+      });
+
+      await batch.commit();
+    }
+
+    setShowAddForm(false);
+    
+    if (sortOrder === 'oldest') {
+      setTimeout(() => {
+        const container = scrollRef.current;
+        if (container) {
+          container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
+        }
+      }, 300);
+    }
+  };
+
   const handleStatusChange = async (ticket: Ticket, newStatus: string) => {
     if (!isAdmin || !ticket.id) return;
     
@@ -243,6 +279,7 @@ export function TicketSidebar({ roomId, isAdmin, activeTicketId, users }: Ticket
               onChangeName={setNewTicketName}
               onChangeLink={setNewTicketLink}
               onSubmit={handleAddTicket}
+              onBulkSubmit={handleBulkAddTickets}
               isAdmin={isAdmin && showAddForm}
               autoFocusName={showAddForm}
             />
