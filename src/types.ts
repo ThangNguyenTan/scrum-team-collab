@@ -14,6 +14,7 @@ export interface RoomData {
   createdAt: FirestoreTimestamp;
   currentTicket?: string;
   activeTicketId?: string | null;
+  deckType?: "fibonacci" | "tshirt";
 }
 
 export interface Ticket {

@@ -30,4 +30,29 @@ test.describe('Landing Page E2E', () => {
     await page.waitForURL('**/room/**');
     expect(page.url()).toContain('/room/');
   });
+
+  test('should allow selecting T-Shirt size deck and creating a room with T-Shirt cards', async ({ page }) => {
+    await page.goto('/');
+
+    const identityInput = page.getByPlaceholder('Identify yourself...');
+    await identityInput.fill('T-Shirt Tester');
+
+    await page.getByRole('button', { name: 'FE', exact: true }).click();
+    
+    // Select T-Shirt Deck
+    await page.getByRole('button', { name: /T-Shirt/i }).first().click();
+
+    const submitButton = page.getByRole('button', { name: /Initialize SCRUM_SESSION/i });
+    await submitButton.click();
+
+    // Verify successful creation by waiting for URL change to /room/
+    await page.waitForURL('**/room/**');
+    
+    // Verify T-Shirt cards are visible (e.g. XS, S, M, L, XL, XXL)
+    const cardXS = page.getByText('XS', { exact: true }).first();
+    await expect(cardXS).toBeVisible();
+    
+    const cardM = page.getByText('M', { exact: true }).first();
+    await expect(cardM).toBeVisible();
+  });
 });

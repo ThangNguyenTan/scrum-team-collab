@@ -16,7 +16,7 @@ import { auth, db } from "@/lib/firebase";
 import { ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import EmojiPicker, { Theme } from "emoji-picker-react";
-import { EMOJIS, FEATURES, TEAM_GROUPS } from "@/constants";
+import { EMOJIS, FEATURES, TEAM_GROUPS, DECKS, DeckType } from "@/constants";
 import { LandingNavbar } from "@/components/landing/LandingNavbar";
 import { FeatureCard } from "@/components/landing/FeatureCard";
 import { DraggableEmojiPicker } from "@/components/room/DraggableEmojiPicker";
@@ -28,6 +28,7 @@ export default function Home() {
   const [name, setName] = useState("");
   const [avatar, setAvatar] = useState(EMOJIS[0]);
   const [group, setGroup] = useState("");
+  const [deckType, setDeckType] = useState<DeckType>("fibonacci");
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const emojiPickerRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
@@ -127,6 +128,7 @@ export default function Home() {
         creatorName: name,
         status: "planning", // default starting mode
         revealed: false,
+        deckType: deckType,
         createdAt: serverTimestamp(),
       });
       
@@ -257,6 +259,33 @@ export default function Home() {
                         {g}
                       </button>
                     ))}
+                  </div>
+                </div>
+
+                <div className="relative group/deck-input space-y-2 mt-2">
+                  <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500 mb-1 ml-1">Estimation Deck Type</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {(Object.keys(DECKS) as DeckType[]).map((type) => {
+                      const config = DECKS[type];
+                      const isSelected = deckType === type;
+                      return (
+                        <button
+                          key={`deck-select-${type}`}
+                          type="button"
+                          onClick={() => setDeckType(type)}
+                          className={cn(
+                            "flex flex-col items-center justify-center p-3 rounded-2xl border text-center transition-all cursor-pointer hover:scale-[1.02] active:scale-[0.98]",
+                            isSelected
+                              ? "bg-indigo-500/10 border-indigo-500/50 text-indigo-600 dark:text-indigo-400 shadow-[0_0_15px_rgba(99,102,241,0.1)]"
+                              : "bg-zinc-100 border-zinc-200 text-zinc-500 hover:text-zinc-900 hover:bg-zinc-200 hover:border-zinc-300 dark:bg-white/5 dark:border-white/10 dark:hover:text-white dark:hover:bg-white/10 dark:hover:border-white/20"
+                          )}
+                        >
+                          <span className="text-xl mb-1">{config.icon}</span>
+                          <span className="text-[10px] font-black uppercase tracking-wider">{config.name}</span>
+                          <span className="text-[8px] text-zinc-400 dark:text-zinc-500 mt-1 font-medium leading-tight line-clamp-2">{config.description}</span>
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
                 

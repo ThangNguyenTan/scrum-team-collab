@@ -7,9 +7,37 @@ export const EMOJIS = [
 
 export const TEAM_GROUPS = ["FE", "BE", "QA", "BA", "PM"];
 
+export type DeckType = "fibonacci" | "tshirt";
+
+export interface DeckConfig {
+  id: DeckType;
+  name: string;
+  cards: string[];
+  icon: string;
+  description: string;
+}
+
+export const DECKS: Record<DeckType, DeckConfig> = {
+  fibonacci: {
+    id: "fibonacci",
+    name: "Fibonacci",
+    cards: ["1", "2", "3", "5", "8", "13", "21", "34", "55", "89", "?", "☕"],
+    icon: "🔢",
+    description: "Standard agile story points (1 to 89)"
+  },
+  tshirt: {
+    id: "tshirt",
+    name: "T-Shirt",
+    cards: ["XS", "S", "M", "L", "XL", "XXL", "?", "☕"],
+    icon: "👕",
+    description: "Relative sizing (Extra Small to Double Extra Large)"
+  }
+};
+
 export const PLANNING_CARDS = ["1", "2", "3", "5", "8", "13", "21", "34", "55", "89", "?", "☕"];
 
 export const ANIMAL_MAPPING: Record<string, { name: string, image: string }> = {
+  // Fibonacci
   "1": { name: "Ant", image: "https://images.unsplash.com/photo-1763810885185-56c7731b4ce5?auto=format&fit=crop&q=80&w=600" },
   "2": { name: "Mouse", image: "https://images.unsplash.com/photo-1613773215530-471bd830edb9?auto=format&fit=crop&q=80&w=600" },
   "3": { name: "Hedgehog", image: "https://images.unsplash.com/photo-1619101803727-699263d0fc60?auto=format&fit=crop&q=80&w=600" },
@@ -20,6 +48,13 @@ export const ANIMAL_MAPPING: Record<string, { name: string, image: string }> = {
   "34": { name: "Elephant", image: "https://images.unsplash.com/photo-1557050543-4d5f4e07ef46?auto=format&fit=crop&q=80&w=600" },
   "55": { name: "Whale", image: "https://images.unsplash.com/photo-1612443385320-5b5a3fbf6725?auto=format&fit=crop&q=80&w=600" },
   "89": { name: "T-Rex", image: "https://images.unsplash.com/photo-1583867195148-e869329c07b4?auto=format&fit=crop&q=80&w=600" },
+  // T-Shirt
+  "XS": { name: "Ant", image: "https://images.unsplash.com/photo-1763810885185-56c7731b4ce5?auto=format&fit=crop&q=80&w=600" },
+  "S": { name: "Hedgehog", image: "https://images.unsplash.com/photo-1619101803727-699263d0fc60?auto=format&fit=crop&q=80&w=600" },
+  "M": { name: "Cat", image: "https://images.unsplash.com/photo-1701642321998-eb0b3bf460e0?auto=format&fit=crop&q=80&w=600" },
+  "L": { name: "Dog", image: "https://images.unsplash.com/photo-1671382847012-248f137d9cc5?auto=format&fit=crop&q=80&w=600" },
+  "XL": { name: "Lion", image: "https://images.unsplash.com/photo-1614027164847-1b28cfe1df60?auto=format&fit=crop&q=80&w=600" },
+  "XXL": { name: "Elephant", image: "https://images.unsplash.com/photo-1557050543-4d5f4e07ef46?auto=format&fit=crop&q=80&w=600" }
 };
 
 export const FEATURES = [

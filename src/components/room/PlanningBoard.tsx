@@ -4,7 +4,7 @@ import { db } from "@/lib/firebase";
 import { RefreshCw, EyeOff, Eye, CheckCircle2, Sparkles, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { RoomData, RoomUser, Ticket } from "@/types";
-import { PLANNING_CARDS, FIBONACCI_SEQUENCE } from "@/constants";
+import { FIBONACCI_SEQUENCE, DECKS, DeckType } from "@/constants";
 import { TicketSidebar } from "./TicketSidebar";
 import { PlanningCard } from "./PlanningCard";
 import { UserVoteCard } from "./UserVoteCard";
@@ -19,7 +19,9 @@ interface PlanningBoardProps {
 }
 
 export function PlanningBoard({ room, roomId, users, isAdmin, currentUserId }: PlanningBoardProps) {
-  const cards = PLANNING_CARDS;
+  const deckType = room?.deckType || "fibonacci";
+  const deckConfig = DECKS[deckType] || DECKS.fibonacci;
+  const cards = deckConfig.cards;
   const myVote = users.find((u) => u.id === currentUserId)?.vote;
   const allVoted = users.length > 0 && users.every((u) => u.vote);
   
@@ -137,6 +139,46 @@ export function PlanningBoard({ room, roomId, users, isAdmin, currentUserId }: P
 
   const stats = (() => {
     if (!room?.revealed) return null;
+
+    const currentDeckType = room?.deckType || "fibonacci";
+
+    if (currentDeckType === "tshirt") {
+      const TSHIRT_VALUES: Record<string, number> = { "XS": 1, "S": 2, "M": 3, "L": 5, "XL": 8, "XXL": 13 };
+      const TSHIRT_REVERSE = [
+        { label: "XS", value: 1 },
+        { label: "S", value: 2 },
+        { label: "M", value: 3 },
+        { label: "L", value: 5 },
+        { label: "XL", value: 8 },
+        { label: "XXL", value: 13 }
+      ];
+      
+      const votes = filteredUsers
+        .map((u) => u.vote && TSHIRT_VALUES[u.vote] !== undefined ? TSHIRT_VALUES[u.vote] : NaN)
+        .filter((v) => !isNaN(v));
+        
+      if (votes.length === 0) return { avg: "N/A", min: "N/A", max: "N/A", proposal: "-" };
+      
+      const avgVal = votes.reduce((a, b) => a + b, 0) / votes.length;
+      const closest = TSHIRT_REVERSE.reduce((prev, curr) => 
+        Math.abs(curr.value - avgVal) < Math.abs(prev.value - avgVal) ? curr : prev
+      );
+      
+      const minVal = Math.min(...votes);
+      const maxVal = Math.max(...votes);
+      
+      const minLabel = TSHIRT_REVERSE.find(t => t.value === minVal)?.label || "XS";
+      const maxLabel = TSHIRT_REVERSE.find(t => t.value === maxVal)?.label || "XXL";
+      
+      return {
+        avg: avgVal.toFixed(1),
+        min: minLabel,
+        max: maxLabel,
+        proposal: closest.label
+      };
+    }
+
+    // Default Fibonacci
     const votes = filteredUsers
       .map((u) => parseFloat(u.vote || ""))
       .filter((v) => !isNaN(v));
@@ -180,12 +222,11 @@ export function PlanningBoard({ room, roomId, users, isAdmin, currentUserId }: P
                   
                   <div className="hidden md:block h-4 xl:h-6 w-px bg-zinc-300 dark:bg-white/10 mx-1"></div>
                   
-                  {/* Proposed Final Estimate */}
                   <span className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-3 xl:px-5 py-1 xl:py-1.5 rounded-lg xl:rounded-xl text-sm xl:text-lg border border-emerald-200 dark:border-emerald-500/30 shadow-[0_0_30px_rgba(52,211,153,0.15)] relative overflow-hidden group shrink-0">
                     <div className="absolute inset-x-0 top-0 h-[1px] bg-emerald-400/50"></div>
                     <Sparkles className="h-3.5 w-3.5 relative z-10 animate-pulse" />
                     <span className="relative z-10 tracking-[0.2em] uppercase text-[8px] xl:text-[9px] font-black pt-1 hidden md:inline-block">PROPOSED:</span>
-                    <span className="relative z-10 font-black text-emerald-900 dark:text-white text-lg xl:text-2xl tabular-nums">{stats.proposal}</span>
+                    <span className="relative z-10 font-black text-emerald-900 dark:text-white text-lg xl:text-2xl">{stats.proposal}</span>
                   </span>
                 </div>
               )}
