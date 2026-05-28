@@ -15,6 +15,12 @@ export interface RoomData {
   currentTicket?: string;
   activeTicketId?: string | null;
   deckType?: "fibonacci" | "tshirt";
+  retroTimer?: {
+    duration: number; // in seconds
+    startedAt: any; // FirestoreTimestamp
+    status: 'idle' | 'running' | 'paused';
+    pausedTimeLeft?: number; // in seconds
+  };
 }
 
 export interface Ticket {
@@ -55,6 +61,20 @@ export interface RetroCard {
   authorId: string;
   authorAvatar?: string;
   createdAt: FirestoreTimestamp;
+  color?: 'default' | 'emerald' | 'rose' | 'amber' | 'sky' | 'purple';
+  isAnonymous?: boolean;
+  parentCardId?: string | null;
+  comments?: {
+    id: string;
+    text: string;
+    authorName: string;
+    authorId: string;
+    authorAvatar?: string;
+    createdAt: number;
+  }[];
+  assigneeId?: string | null;
+  assigneeName?: string | null;
+  actionStatus?: 'todo' | 'in_progress' | 'done';
 }
 
 export interface Feature {
