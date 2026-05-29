@@ -10,7 +10,8 @@ import {
   ChevronUp, 
   CheckCircle, 
   Circle,
-  Undo
+  Undo,
+  Check
 } from "lucide-react";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
@@ -20,6 +21,8 @@ import GifPicker from "./GifPicker";
 import { useDraggable, useDroppable } from "@dnd-kit/core";
 import { doc, updateDoc, arrayUnion, arrayRemove } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+
+
 
 interface RetroCardProps {
   card: RetroCardType;
@@ -33,6 +36,7 @@ interface RetroCardProps {
   isActionItem: boolean;
   onDeleteCard: (cardId: string) => Promise<void>;
   onToggleUpvote: (card: RetroCardType) => Promise<void>;
+  isOverlay?: boolean;
 }
 
 export function RetroCard({
@@ -46,7 +50,8 @@ export function RetroCard({
   mergedCards,
   isActionItem,
   onDeleteCard,
-  onToggleUpvote
+  onToggleUpvote,
+  isOverlay = false
 }: RetroCardProps) {
   // Editing State
   const [isEditing, setIsEditing] = useState(false);
@@ -78,14 +83,16 @@ export function RetroCard({
   });
 
   const setCombinedRef = (node: HTMLDivElement | null) => {
+    if (isOverlay) return;
     setDraggableRef(node);
     setDroppableRef(node);
   };
 
-  const dragStyle = transform ? {
+  const showAsPlaceholder = isDragging && !isOverlay;
+  const isTargetHighlight = isOver && !isDragging && !isOverlay;
+
+  const dragStyle = transform && !isDragging && !isOverlay ? {
     transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
-    zIndex: isDragging ? 50 : undefined,
-    opacity: isDragging ? 0.6 : undefined,
   } : undefined;
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -134,6 +141,7 @@ export function RetroCard({
     await updateDoc(ref, {
       text: editText.trim(),
       imageUrl: editImage || null,
+      color: 'default'
     });
 
     setIsEditing(false);
@@ -142,24 +150,32 @@ export function RetroCard({
 
   const handleAddComment = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newComment.trim()) return;
+    const commentText = newComment.trim();
+    if (!commentText) return;
+
+    // Optimistically clear the input field immediately
+    setNewComment("");
 
     const ref = doc(db, "rooms", roomId, "cards", card.id);
     const currentUser = users.find(u => u.id === currentUserId);
     const commentObj = {
       id: Math.random().toString(36).substring(2, 11),
-      text: newComment.trim(),
+      text: commentText,
       authorId: currentUserId,
       authorName: currentUser?.name || displayName || "Team Member",
       authorAvatar: currentUser?.avatar || avatar || "👤",
       createdAt: Date.now()
     };
 
-    await updateDoc(ref, {
-      comments: arrayUnion(commentObj)
-    });
-
-    setNewComment("");
+    try {
+      await updateDoc(ref, {
+        comments: arrayUnion(commentObj)
+      });
+    } catch (err) {
+      console.error("Failed to add comment:", err);
+      // Restore input text on database failure
+      setNewComment(commentText);
+    }
   };
 
   const handleDeleteComment = async (comment: any) => {
@@ -218,22 +234,52 @@ export function RetroCard({
 
   const totalUpvotes = card.upvotes.length + mergedCards.reduce((acc, c) => acc + (c.upvotes?.length || 0), 0);
 
+  const cardTheme = "bg-white/80 dark:bg-zinc-900/80 border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100 shadow-zinc-500/5";
+
   return (
     <div 
       ref={setCombinedRef}
       style={dragStyle}
       className={cn(
-        "group relative flex flex-col gap-3 lg:gap-4 rounded-2xl lg:rounded-3xl border p-5 lg:p-6 transition-all shadow-sm dark:shadow-[0_20px_40px_rgba(0,0,0,0.3)] bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 hover:border-indigo-500/30 dark:hover:border-indigo-500/30 text-zinc-900 dark:text-white perspective-1000",
-        isOver && !isDragging ? "ring-4 ring-indigo-500/50 scale-[1.02] border-indigo-500 bg-indigo-50/20 dark:bg-indigo-950/20" : "",
-        isDragging ? "opacity-30 border-dashed border-indigo-500" : ""
+        "relative w-full",
+        isDragging || isOverlay ? "transition-none" : "transition-all duration-300",
+        isTargetHighlight ? "scale-[1.02]" : ""
       )}
     >
+      {/* Decorative Card Stack layers behind the card */}
+      {mergedCards.length > 0 && !showAsPlaceholder && (
+        <>
+          {/* Layer 2 (Furthest) */}
+          <div className={cn(
+            "absolute -bottom-2.5 left-4 right-4 h-full rounded-2xl border opacity-40 z-0 pointer-events-none shadow-sm",
+            isDragging || isOverlay ? "transition-none" : "transition-all duration-300",
+            cardTheme
+          )} />
+          {/* Layer 1 (Middle) */}
+          <div className={cn(
+            "absolute -bottom-1.5 left-2 right-2 h-full rounded-2xl border opacity-70 z-0 pointer-events-none shadow-sm",
+            isDragging || isOverlay ? "transition-none" : "transition-all duration-300",
+            cardTheme
+          )} />
+        </>
+      )}
+
+      {/* Main Card */}
+      <div 
+        className={cn(
+          "group relative flex flex-col gap-3 lg:gap-4 rounded-2xl lg:rounded-3xl border p-5 lg:p-6 shadow-sm dark:shadow-[0_20px_40px_rgba(0,0,0,0.3)] hover:shadow-md z-10",
+          isDragging || isOverlay ? "transition-none" : "transition-all duration-300",
+          cardTheme,
+          isTargetHighlight ? "ring-4 ring-indigo-500/50 border-indigo-500" : "",
+          showAsPlaceholder ? "opacity-30 border-dashed border-indigo-500 bg-transparent dark:bg-transparent" : ""
+        )}
+      >
       {/* Drag handle */}
-      {!isEditing && (
+      {!isEditing && !isOverlay && (
         <div 
           {...attributes} 
           {...listeners}
-          className="absolute top-4 right-4 p-1 rounded-lg text-zinc-400 dark:text-zinc-600 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/5 cursor-grab active:cursor-grabbing transition-colors opacity-0 group-hover:opacity-100"
+          className="absolute top-4 right-4 p-1 rounded-lg text-zinc-400 dark:text-zinc-600 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/5 cursor-grab active:cursor-grabbing transition-colors opacity-40 group-hover:opacity-100"
           title="Drag to reorder or drop on another card to merge"
         >
           <GripVertical className="h-4 w-4" />
@@ -242,7 +288,7 @@ export function RetroCard({
 
       {isEditing ? (
         <div className="flex flex-col gap-4">
-          <div className="absolute top-0 left-0 w-full h-[2px] bg-indigo-500"></div>
+          <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 z-20"></div>
           
           {editImage && (
             <div className="relative w-full min-h-[300px] rounded-xl overflow-hidden bg-black/40 border border-indigo-500/20 mb-2">
@@ -263,7 +309,7 @@ export function RetroCard({
             </div>
           )}
 
-          <div className="relative rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-black/25 p-4 focus-within:border-indigo-500/50 focus-within:ring-2 focus-within:ring-indigo-500/10 transition-all">
+          <div className="relative rounded-2xl border border-zinc-200/80 dark:border-zinc-800 bg-zinc-50/30 dark:bg-zinc-950/40 p-4 focus-within:border-indigo-500/50 focus-within:ring-2 focus-within:ring-indigo-500/10 focus-within:bg-white dark:focus-within:bg-zinc-950/60 transition-all duration-300">
             <textarea 
               autoFocus
               className="w-full bg-transparent border-none text-zinc-900 dark:text-white text-sm md:text-base focus:outline-none resize-none min-h-[140px] custom-scrollbar font-medium placeholder-zinc-400 dark:placeholder-zinc-600"
@@ -273,11 +319,11 @@ export function RetroCard({
             />
           </div>
 
-          <div className="flex items-center justify-between mt-2 pt-4 border-t border-zinc-200 dark:border-zinc-800">
-            <div className="flex flex-wrap items-center gap-3">
+          <div className="flex items-center justify-between gap-3 mt-2 pt-4 border-t border-zinc-200 dark:border-zinc-800 w-full overflow-x-auto scrollbar-none py-1">
+            <div className="flex items-center gap-2 shrink-0">
               <label 
                 title="Change Image"
-                className="h-9 px-4 rounded-xl transition-all flex items-center justify-center gap-2 bg-zinc-100 dark:bg-white/5 text-zinc-600 dark:text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-200 dark:hover:bg-white/10 cursor-pointer border border-zinc-200 dark:border-white/5 active:scale-95"
+                className="h-10 px-4 rounded-xl transition-all flex items-center justify-center gap-2 bg-zinc-100 dark:bg-white/5 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-200 dark:hover:bg-white/10 hover:border-zinc-300 dark:hover:border-zinc-700 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 cursor-pointer active:scale-95 border border-zinc-200/50 dark:border-white/5 text-[11px] font-black uppercase tracking-wider whitespace-nowrap shrink-0"
               >
                 <UploadCloud className="h-4 w-4" />
                 <span className="text-[11px] font-black uppercase tracking-wider">Image</span>
@@ -287,15 +333,17 @@ export function RetroCard({
                 title="Change GIF"
                 onClick={() => setShowGifPicker(!showGifPicker)}
                 className={cn(
-                  "h-9 px-4 rounded-xl transition-all flex items-center justify-center border border-transparent active:scale-95",
-                  showGifPicker ? "bg-indigo-500 text-white" : "bg-zinc-100 dark:bg-white/5 text-zinc-600 dark:text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-200 dark:hover:bg-white/10 border-zinc-200 dark:border-white/5"
+                  "h-10 px-4 rounded-xl transition-all flex items-center justify-center border border-zinc-200/50 dark:border-white/5 active:scale-95 text-[11px] font-black uppercase tracking-wider cursor-pointer whitespace-nowrap shrink-0",
+                  showGifPicker 
+                    ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/20 border-transparent" 
+                    : "bg-zinc-100 dark:bg-white/5 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-200 dark:hover:bg-white/10 hover:border-zinc-300 dark:hover:border-zinc-700 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-500/10"
                 )}
               >
                 <span className="text-[11px] font-black uppercase tracking-wider">GIF</span>
               </button>
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 shrink-0">
               <button 
                 onClick={() => {
                   setIsEditing(false);
@@ -303,15 +351,21 @@ export function RetroCard({
                   setEditText(card.text);
                   setEditImage(card.imageUrl || "");
                 }} 
-                className="text-[10px] font-black text-zinc-500 dark:text-zinc-600 uppercase tracking-widest hover:text-zinc-900 dark:hover:text-white transition-colors"
+                title="Cancel"
+                aria-label="Cancel"
+                className="w-10 h-10 flex items-center justify-center text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition-all cursor-pointer hover:bg-zinc-100 dark:hover:bg-white/5 rounded-xl active:scale-95 whitespace-nowrap shrink-0"
               >
-                Abort
+                <X className="h-5 w-5" />
+                <span className="sr-only">Cancel</span>
               </button>
               <button 
                 onClick={handleUpdate} 
-                className="bg-indigo-500 text-white px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] active:scale-95 shadow-lg shadow-indigo-500/20 hover:bg-indigo-600"
+                title="Sync Edit"
+                aria-label="Sync Edit"
+                className="bg-indigo-600 hover:bg-indigo-500 text-white w-10 h-10 rounded-xl active:scale-95 shadow-lg shadow-indigo-500/20 transition-all cursor-pointer flex items-center justify-center whitespace-nowrap shrink-0"
               >
-                Sync Edit
+                <Check className="h-5 w-5" />
+                <span className="sr-only">Sync Edit</span>
               </button>
             </div>
           </div>
@@ -451,24 +505,24 @@ export function RetroCard({
               </div>
             </div>
           )}
-          
-          <div className="flex flex-wrap items-center justify-between gap-3 mt-2 pt-4 border-t border-zinc-200 dark:border-white/[0.03]">
-            {/* Author info */}
-            <div className="flex items-center gap-2 md:gap-3">
-              <div className="flex h-6 w-6 md:h-7 md:w-7 items-center justify-center rounded-lg bg-indigo-500/10 text-[9px] md:text-[10px] font-black text-indigo-400 border border-indigo-500/20 shadow-inner">
+          <div className="flex flex-col gap-3 mt-2 pt-4 border-t border-zinc-200 dark:border-white/[0.03] w-full">
+            {/* Row 1: Author Info */}
+            <div className="flex items-center gap-2">
+              <div className="flex h-6 w-6 md:h-7 md:w-7 items-center justify-center rounded-lg bg-indigo-500/10 text-[9px] md:text-[10px] font-black text-indigo-400 border border-indigo-500/20 shadow-inner shrink-0">
                 {card.authorAvatar ? <span className="text-xs md:text-sm">{card.authorAvatar}</span> : (card.authorName || "S").charAt(0).toUpperCase()}
               </div>
-              <span className="text-[8px] sm:text-[9px] lg:text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em]">
+              <span className="text-[8px] sm:text-[9px] lg:text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em] truncate">
                 {card.authorName || "Squad Member"}
               </span>
             </div>
-            
-            <div className="flex items-center gap-1.5">
-              {/* Comment Thread Button */}
+
+            {/* Row 2: Actions Row */}
+            <div className="flex items-center justify-between w-full gap-2">
+              {/* Left side: Comments button */}
               <button 
                 onClick={() => setShowComments(!showComments)}
                 className={cn(
-                  "flex items-center gap-1 md:gap-2 px-2.5 py-1.5 rounded-lg md:rounded-xl text-[9px] md:text-[10px] lg:text-xs font-black transition-all uppercase tracking-widest",
+                  "flex items-center gap-1 md:gap-2 px-2.5 py-1.5 rounded-lg md:rounded-xl text-[9px] md:text-[10px] lg:text-xs font-black transition-all uppercase tracking-widest shrink-0",
                   showComments 
                     ? "bg-indigo-500/15 text-indigo-500 border border-indigo-500/25" 
                     : "bg-zinc-100 dark:bg-white/5 text-zinc-500 hover:bg-zinc-200 dark:hover:bg-white/10 hover:text-indigo-600 dark:hover:text-indigo-400 border border-transparent"
@@ -477,43 +531,53 @@ export function RetroCard({
                 <MessageSquare className="h-3 w-3" />
                 <span>Comments ({allComments.length})</span>
               </button>
-
-              {/* Edit/Delete options */}
-              {(isAdmin || card.authorId === currentUserId) && (
-                <div className="flex items-center opacity-0 group-hover:opacity-100 transition-all mr-1">
-                  <button 
-                    onClick={() => {
-                      setIsEditing(true);
-                      setEditText(card.text);
-                      setEditImage(card.imageUrl || "");
-                    }} 
-                    className="p-2 text-zinc-400 dark:text-zinc-600 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
-                  >
-                    <Edit2 className="h-3.5 w-3.5" />
-                  </button>
-                  <button onClick={() => onDeleteCard(card.id)} className="p-2 text-zinc-400 dark:text-zinc-600 hover:text-red-500 transition-colors">
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </button>
-                </div>
-              )}
-
-              {/* Upvote button */}
-              <button 
-                disabled={card.authorId === currentUserId}
-                onClick={() => onToggleUpvote(card)}
-                className={cn(
-                  "flex items-center gap-1 md:gap-2 px-2.5 md:px-3 py-1.5 rounded-lg md:rounded-xl text-[9px] md:text-[10px] lg:text-xs font-black transition-all uppercase tracking-widest",
-                  card.authorId === currentUserId
-                    ? "opacity-30 cursor-not-allowed" 
-                    : "cursor-pointer active:scale-90",
-                  card.upvotes.includes(currentUserId) 
-                    ? "bg-indigo-500 text-white shadow-lg shadow-indigo-500/20" 
-                    : "bg-zinc-100 dark:bg-white/5 text-zinc-500 hover:bg-zinc-200 dark:hover:bg-white/10 hover:text-indigo-600 dark:hover:text-indigo-400 border border-transparent hover:border-indigo-500/20"
+              
+              {/* Right side: Actions (Edit/Delete) and Like/Upvote */}
+              <div className="flex items-center gap-1.5 ml-auto shrink-0">
+                {/* Edit/Delete options */}
+                {(isAdmin || card.authorId === currentUserId) && (
+                  <div className="flex items-center opacity-0 group-hover:opacity-100 transition-all mr-1 gap-1">
+                    <button 
+                      onClick={() => {
+                        setIsEditing(true);
+                        setEditText(card.text);
+                        setEditImage(card.imageUrl || "");
+                      }} 
+                      title="Edit Insight"
+                      aria-label="Edit Insight"
+                      className="p-2 text-zinc-400 dark:text-zinc-600 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 hover:scale-110 rounded-lg active:scale-90 transition-all duration-200"
+                    >
+                      <Edit2 className="h-3.5 w-3.5" />
+                    </button>
+                    <button 
+                      onClick={() => onDeleteCard(card.id)} 
+                      title="Delete Insight"
+                      aria-label="Delete Insight"
+                      className="p-2 text-zinc-400 dark:text-zinc-600 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 hover:scale-110 rounded-lg active:scale-90 transition-all duration-200"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
                 )}
-              >
-                <ThumbsUp className={cn("h-3 w-3", card.upvotes.includes(currentUserId) ? "fill-white" : "")} />
-                {totalUpvotes}
-              </button>
+
+                {/* Upvote button */}
+                <button 
+                  disabled={card.authorId === currentUserId}
+                  onClick={() => onToggleUpvote(card)}
+                  className={cn(
+                    "flex items-center gap-1 md:gap-2 px-2.5 md:px-3 py-1.5 rounded-lg md:rounded-xl text-[9px] md:text-[10px] lg:text-xs font-black transition-all uppercase tracking-widest group/upvote",
+                    card.authorId === currentUserId
+                      ? "opacity-30 cursor-not-allowed" 
+                      : "cursor-pointer active:scale-90",
+                    card.upvotes.includes(currentUserId) 
+                      ? "bg-indigo-50 text-white shadow-lg shadow-indigo-500/20" 
+                      : "bg-zinc-100 dark:bg-white/5 text-zinc-500 hover:bg-zinc-200 dark:hover:bg-white/10 hover:text-indigo-600 dark:hover:text-indigo-400 border border-transparent hover:border-indigo-500/20"
+                  )}
+                >
+                  <ThumbsUp className={cn("h-3 w-3 transition-transform duration-200 group-hover/upvote:scale-110", card.upvotes.includes(currentUserId) ? "fill-white" : "")} />
+                  {totalUpvotes}
+                </button>
+              </div>
             </div>
           </div>
 
@@ -576,6 +640,7 @@ export function RetroCard({
           )}
         </>
       )}
+      </div>
     </div>
   );
 }
