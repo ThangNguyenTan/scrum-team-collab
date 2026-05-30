@@ -21,6 +21,7 @@ import GifPicker from "./GifPicker";
 import { useDraggable, useDroppable } from "@dnd-kit/core";
 import { doc, updateDoc, arrayUnion, arrayRemove } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { CustomDialog, useCustomDialog } from "./CustomDialog";
 
 
 
@@ -53,6 +54,7 @@ export function RetroCard({
   onToggleUpvote,
   isOverlay = false
 }: RetroCardProps) {
+  const { alertCustom, confirmCustom, dialogProps } = useCustomDialog();
   // Editing State
   const [isEditing, setIsEditing] = useState(false);
   const [editText, setEditText] = useState(card.text);
@@ -95,12 +97,12 @@ export function RetroCard({
     transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
   } : undefined;
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     if (file.size > 5 * 1024 * 1024) {
-      alert("Image size must be below 5MB");
+      await alertCustom("File Too Large", "Image size must be below 5MB to ensure fast loading times.");
       return;
     }
 
@@ -179,7 +181,8 @@ export function RetroCard({
   };
 
   const handleDeleteComment = async (comment: any) => {
-    if (!confirm("Delete this comment?")) return;
+    const confirmed = await confirmCustom("Delete Comment", "Are you sure you want to delete this comment?", "danger", "Delete");
+    if (!confirmed) return;
     const ref = doc(db, "rooms", roomId, "cards", card.id);
     await updateDoc(ref, {
       comments: arrayRemove(comment)
@@ -216,7 +219,8 @@ export function RetroCard({
   };
 
   const unmergeCard = async (childId: string) => {
-    if (!confirm("Separate this thought from the stack?")) return;
+    const confirmed = await confirmCustom("Separate Thought", "Are you sure you want to separate this thought from the stack?", "primary", "Separate");
+    if (!confirmed) return;
     const ref = doc(db, "rooms", roomId, "cards", childId);
     await updateDoc(ref, {
       parentCardId: null
@@ -641,6 +645,7 @@ export function RetroCard({
         </>
       )}
       </div>
+      <CustomDialog {...dialogProps} />
     </div>
   );
 }

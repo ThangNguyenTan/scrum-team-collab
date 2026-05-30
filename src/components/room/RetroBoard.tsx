@@ -31,6 +31,7 @@ import { toPng } from "html-to-image";
 import { RoomData, RoomUser, RetroColumn, RetroCard as RetroCardType } from "@/types";
 import { RetroCard } from "./RetroCard";
 import GifPicker from "./GifPicker";
+import { CustomDialog, useCustomDialog } from "./CustomDialog";
 import { playPing, playTada } from "@/lib/audioSynth";
 
 // DND kit imports
@@ -171,6 +172,7 @@ export function RetroBoard({
   displayName, 
   avatar 
 }: RetroBoardProps) {
+  const { alertCustom, confirmCustom, promptCustom, dialogProps } = useCustomDialog();
   // New Card State
   const [newCardText, setNewCardText] = useState("");
   const [newCardImage, setNewCardImage] = useState("");
@@ -228,12 +230,12 @@ export function RetroBoard({
     return () => clearInterval(interval);
   }, [room?.retroTimer]);
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     if (file.size > 5 * 1024 * 1024) {
-      alert("Image size must be below 5MB");
+      await alertCustom("File Too Large", "Image size must be below 5MB to ensure fast loading times for all team members.");
       return;
     }
 
@@ -314,13 +316,14 @@ export function RetroBoard({
   };
 
   const deleteCard = async (cardId: string) => {
-    if(!window.confirm("Delete this card?")) return;
+    const confirmed = await confirmCustom("Delete Insight Card", "Are you sure you want to delete this card? This action cannot be undone.", "danger", "Delete");
+    if (!confirmed) return;
     await deleteDoc(doc(db, "rooms", roomId, "cards", cardId));
   };
 
   const addColumn = async () => {
     if (!isAdmin) return;
-    const title = window.prompt("Column Title:");
+    const title = await promptCustom("Add Retro Column", "Enter the name for your new retro column:", "", "Column Title (e.g., Ideas, Risks)", "Create");
     if (!title) return;
     await addDoc(collection(db, "rooms", roomId, "columns"), {
       title,
@@ -330,14 +333,15 @@ export function RetroBoard({
 
   const renameColumn = async (col: RetroColumn) => {
     if (!isAdmin) return;
-    const newTitle = window.prompt("New Column Title:", col.title);
+    const newTitle = await promptCustom("Rename Column", "Enter the new title for this retro column:", col.title, "New Column Title", "Rename");
     if (!newTitle) return;
     await updateDoc(doc(db, "rooms", roomId, "columns", col.id), { title: newTitle });
   };
 
   const deleteColumn = async (colId: string) => {
     if (!isAdmin) return;
-    if (!window.confirm("Deleting a column will hide its cards. Continue?")) return;
+    const confirmed = await confirmCustom("Delete Column", "Deleting a column will permanently hide all of its cards. Are you sure you want to continue?", "danger", "Delete Column");
+    if (!confirmed) return;
     await deleteDoc(doc(db, "rooms", roomId, "columns", colId));
   };
 
@@ -518,121 +522,123 @@ export function RetroBoard({
         </div>
 
         {/* Center: Synchronized Countdown Timer */}
-        <div className="flex flex-col relative overflow-hidden bg-zinc-100/80 dark:bg-white/[0.02] border border-zinc-200 dark:border-white/5 p-3 rounded-2xl xl:mx-auto">
-          {timeLeft !== null && room.retroTimer?.status !== "idle" && (
-            <div className="absolute top-0 left-0 right-0 h-[3px] bg-zinc-200 dark:bg-white/5">
-              <div 
-                className={cn(
-                  "h-full transition-all duration-1000 ease-linear",
-                  timeLeft <= 15 ? "bg-rose-500 animate-pulse" : timeLeft <= 60 ? "bg-amber-500" : "bg-indigo-500"
-                )}
-                style={{ width: `${progressPercent}%` }}
-              ></div>
-            </div>
-          )}
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="flex items-center gap-2">
-              <Timer className={cn(
-                "h-5 w-5 transition-all duration-300",
-                timeLeft !== null && timeLeft > 0 && room.retroTimer?.status === "running" ? "text-indigo-500 animate-pulse" : "text-zinc-400",
-                timeLeft !== null && timeLeft <= 30 && timeLeft > 0 && "text-rose-500 animate-bounce scale-110"
-              )} />
-              
-              <span className={cn(
-                "font-mono font-black text-lg md:text-xl lg:text-2xl tracking-wider tabular-nums transition-colors duration-300",
-                timeLeft === null ? "text-zinc-400" : "text-zinc-800 dark:text-white",
-                timeLeft !== null && timeLeft <= 30 && timeLeft > 0 && "text-rose-500 animate-pulse font-black"
-              )}>
-                {timeLeft !== null ? formatTime(timeLeft) : "00:00"}
-              </span>
+        <div className="relative xl:mx-auto">
+          <div className="flex flex-col relative overflow-hidden bg-zinc-100/80 dark:bg-white/[0.02] border border-zinc-200 dark:border-white/5 p-3 rounded-2xl">
+            {timeLeft !== null && room.retroTimer?.status !== "idle" && (
+              <div className="absolute top-0 left-0 right-0 h-[3px] bg-zinc-200 dark:bg-white/5">
+                <div 
+                  className={cn(
+                    "h-full transition-all duration-1000 ease-linear",
+                    timeLeft <= 15 ? "bg-rose-500 animate-pulse" : timeLeft <= 60 ? "bg-amber-500" : "bg-indigo-500"
+                  )}
+                  style={{ width: `${progressPercent}%` }}
+                ></div>
+              </div>
+            )}
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="flex items-center gap-2">
+                <Timer className={cn(
+                  "h-5 w-5 transition-all duration-300",
+                  timeLeft !== null && timeLeft > 0 && room.retroTimer?.status === "running" ? "text-indigo-500 animate-pulse" : "text-zinc-400",
+                  timeLeft !== null && timeLeft <= 30 && timeLeft > 0 && "text-rose-500 animate-bounce scale-110"
+                )} />
+                
+                <span className={cn(
+                  "font-mono font-black text-lg md:text-xl lg:text-2xl tracking-wider tabular-nums transition-colors duration-300",
+                  timeLeft === null ? "text-zinc-400" : "text-zinc-800 dark:text-white",
+                  timeLeft !== null && timeLeft <= 30 && timeLeft > 0 && "text-rose-500 animate-pulse font-black"
+                )}>
+                  {timeLeft !== null ? formatTime(timeLeft) : "00:00"}
+                </span>
 
-              {timeLeft !== null && timeLeft === 0 && (
-                <span className="text-[10px] font-black uppercase text-rose-500 animate-pulse px-2 py-0.5 bg-rose-500/10 rounded-md border border-rose-500/20">
-                  Time's Up!
+                {timeLeft !== null && timeLeft === 0 && (
+                  <span className="text-[10px] font-black uppercase text-rose-500 animate-pulse px-2 py-0.5 bg-rose-500/10 rounded-md border border-rose-500/20">
+                    Time's Up!
+                  </span>
+                )}
+              </div>
+
+              <div className="h-6 w-px bg-zinc-300 dark:bg-white/10"></div>
+
+              {/* Facilitator / Admin Timer Actions */}
+              {isAdmin ? (
+                <div className="flex items-center gap-1.5">
+                  {room.retroTimer?.status === "running" ? (
+                    <button 
+                      onClick={pauseTimer}
+                      className="p-2 hover:bg-zinc-200 dark:hover:bg-white/10 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white rounded-lg transition-colors cursor-pointer"
+                      title="Pause Timer"
+                    >
+                      <Pause className="h-4 w-4" />
+                    </button>
+                  ) : room.retroTimer?.status === "paused" ? (
+                    <button 
+                      onClick={resumeTimer}
+                      className="p-2 bg-indigo-500 hover:bg-indigo-600 text-white rounded-lg transition-colors shadow-md shadow-indigo-500/15 cursor-pointer"
+                      title="Resume Timer"
+                    >
+                      <Play className="h-4 w-4 fill-white" />
+                    </button>
+                  ) : (
+                    <div className="flex items-center gap-1">
+                      <button 
+                        onClick={() => startTimer(60)}
+                        className="px-2 py-1 hover:bg-zinc-200 dark:hover:bg-white/10 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white text-[10px] font-black uppercase rounded-lg border border-zinc-200 dark:border-zinc-800/50 transition-all cursor-pointer"
+                      >
+                        1m
+                      </button>
+                      <button 
+                        onClick={() => startTimer(180)}
+                        className="px-2 py-1 hover:bg-zinc-200 dark:hover:bg-white/10 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white text-[10px] font-black uppercase rounded-lg border border-zinc-200 dark:border-zinc-800/50 transition-all cursor-pointer"
+                      >
+                        3m
+                      </button>
+                      <button 
+                        onClick={() => startTimer(300)}
+                        className="px-2 py-1 hover:bg-zinc-200 dark:hover:bg-white/10 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white text-[10px] font-black uppercase rounded-lg border border-zinc-200 dark:border-zinc-800/50 transition-all cursor-pointer"
+                      >
+                        5m
+                      </button>
+                      <button 
+                        onClick={() => startTimer(600)}
+                        className="px-2 py-1 hover:bg-zinc-200 dark:hover:bg-white/10 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white text-[10px] font-black uppercase rounded-lg border border-zinc-200 dark:border-zinc-800/50 transition-all cursor-pointer"
+                      >
+                        10m
+                      </button>
+                      <button 
+                        onClick={() => setShowCustomTimer(!showCustomTimer)}
+                        className={cn(
+                          "p-2 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white rounded-lg transition-all cursor-pointer",
+                          showCustomTimer ? "bg-indigo-500/10 text-indigo-500" : "hover:bg-zinc-200 dark:hover:bg-white/10"
+                        )}
+                        title="Customize Timer"
+                      >
+                        <Sliders className="h-4 w-4" />
+                      </button>
+                    </div>
+                  )}
+
+                  {room.retroTimer?.status && room.retroTimer?.status !== "idle" && (
+                    <button 
+                      onClick={resetTimer}
+                      className="p-2 hover:bg-zinc-200 dark:hover:bg-white/10 text-zinc-500 dark:text-zinc-400 hover:text-rose-500 rounded-lg transition-colors cursor-pointer"
+                      title="Reset Timer"
+                    >
+                      <RotateCcw className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <span className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest px-2">
+                  {room.retroTimer?.status === "running" ? "Running" : room.retroTimer?.status === "paused" ? "Paused" : "Timer Off"}
                 </span>
               )}
             </div>
-
-            <div className="h-6 w-px bg-zinc-300 dark:bg-white/10"></div>
-
-            {/* Facilitator / Admin Timer Actions */}
-            {isAdmin ? (
-              <div className="flex items-center gap-1.5">
-                {room.retroTimer?.status === "running" ? (
-                  <button 
-                    onClick={pauseTimer}
-                    className="p-2 hover:bg-zinc-200 dark:hover:bg-white/10 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white rounded-lg transition-colors cursor-pointer"
-                    title="Pause Timer"
-                  >
-                    <Pause className="h-4 w-4" />
-                  </button>
-                ) : room.retroTimer?.status === "paused" ? (
-                  <button 
-                    onClick={resumeTimer}
-                    className="p-2 bg-indigo-500 hover:bg-indigo-600 text-white rounded-lg transition-colors shadow-md shadow-indigo-500/15 cursor-pointer"
-                    title="Resume Timer"
-                  >
-                    <Play className="h-4 w-4 fill-white" />
-                  </button>
-                ) : (
-                  <div className="flex items-center gap-1">
-                    <button 
-                      onClick={() => startTimer(60)}
-                      className="px-2 py-1 hover:bg-zinc-200 dark:hover:bg-white/10 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white text-[10px] font-black uppercase rounded-lg border border-zinc-200 dark:border-zinc-800/50 transition-all cursor-pointer"
-                    >
-                      1m
-                    </button>
-                    <button 
-                      onClick={() => startTimer(180)}
-                      className="px-2 py-1 hover:bg-zinc-200 dark:hover:bg-white/10 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white text-[10px] font-black uppercase rounded-lg border border-zinc-200 dark:border-zinc-800/50 transition-all cursor-pointer"
-                    >
-                      3m
-                    </button>
-                    <button 
-                      onClick={() => startTimer(300)}
-                      className="px-2 py-1 hover:bg-zinc-200 dark:hover:bg-white/10 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white text-[10px] font-black uppercase rounded-lg border border-zinc-200 dark:border-zinc-800/50 transition-all cursor-pointer"
-                    >
-                      5m
-                    </button>
-                    <button 
-                      onClick={() => startTimer(600)}
-                      className="px-2 py-1 hover:bg-zinc-200 dark:hover:bg-white/10 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white text-[10px] font-black uppercase rounded-lg border border-zinc-200 dark:border-zinc-800/50 transition-all cursor-pointer"
-                    >
-                      10m
-                    </button>
-                    <button 
-                      onClick={() => setShowCustomTimer(!showCustomTimer)}
-                      className={cn(
-                        "p-2 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white rounded-lg transition-all cursor-pointer",
-                        showCustomTimer ? "bg-indigo-500/10 text-indigo-500" : "hover:bg-zinc-200 dark:hover:bg-white/10"
-                      )}
-                      title="Customize Timer"
-                    >
-                      <Sliders className="h-4 w-4" />
-                    </button>
-                  </div>
-                )}
-
-                {room.retroTimer?.status && room.retroTimer?.status !== "idle" && (
-                  <button 
-                    onClick={resetTimer}
-                    className="p-2 hover:bg-zinc-200 dark:hover:bg-white/10 text-zinc-500 dark:text-zinc-400 hover:text-rose-500 rounded-lg transition-colors cursor-pointer"
-                    title="Reset Timer"
-                  >
-                    <RotateCcw className="h-4 w-4" />
-                  </button>
-                )}
-              </div>
-            ) : (
-              <span className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest px-2">
-                {room.retroTimer?.status === "running" ? "Running" : room.retroTimer?.status === "paused" ? "Paused" : "Timer Off"}
-              </span>
-            )}
           </div>
 
           {/* Custom Timer Input Dialog */}
           {showCustomTimer && isAdmin && (
-            <div className="flex items-center gap-1.5 bg-white dark:bg-zinc-900 p-2 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-xl absolute top-20 z-50 animate-in zoom-in-95 duration-100">
+            <div className="flex items-center gap-1.5 bg-white dark:bg-zinc-900 p-2 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-xl absolute top-full left-1/2 -translate-x-1/2 mt-2 z-50 animate-in zoom-in-95 duration-100">
               <input
                 type="number"
                 value={customMin}
@@ -653,7 +659,7 @@ export function RetroBoard({
               />
               <button
                 onClick={handleStartCustomTimer}
-                className="p-1.5 bg-indigo-500 hover:bg-indigo-600 text-white rounded-lg transition-colors shadow-md shadow-indigo-500/10"
+                className="p-1.5 bg-indigo-500 hover:bg-indigo-600 text-white rounded-lg transition-colors shadow-md shadow-indigo-500/10 cursor-pointer"
                 title="Start custom timer"
               >
                 <Check className="h-3.5 w-3.5" />
@@ -883,6 +889,7 @@ export function RetroBoard({
           ) : null}
         </DragOverlay>
       </DndContext>
+      <CustomDialog {...dialogProps} />
     </div>
   );
 }

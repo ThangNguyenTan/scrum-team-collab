@@ -38,10 +38,12 @@ import { RetroBoard } from "@/components/room/RetroBoard";
 import { UserSidebar } from "@/components/room/UserSidebar";
 import { JoinRoomModal } from "@/components/room/JoinRoomModal";
 import { RoomHeader } from "@/components/room/RoomHeader";
+import { CustomDialog, useCustomDialog } from "@/components/room/CustomDialog";
 
 export default function RoomPage() {
   const { id: roomId } = useParams() as { id: string };
   const router = useRouter();
+  const { confirmCustom, dialogProps } = useCustomDialog();
   
   const [user, setUser] = useState<User | null>(null);
   const [displayName, setDisplayName] = useState<string>("");
@@ -348,14 +350,16 @@ export default function RoomPage() {
 
   const handleKickUser = async (userId: string) => {
     if (!isAdmin || !roomId) return;
-    if (confirm("Are you sure you want to remove this user from the room?")) {
+    const confirmed = await confirmCustom("Remove User", "Are you sure you want to remove this user from the room?", "danger", "Remove");
+    if (confirmed) {
       await deleteDoc(doc(db, "rooms", roomId, "users", userId));
     }
   };
 
   const handleTransferHost = async (targetUser: RoomUser) => {
     if (!isAdmin || !roomId || targetUser.id === user?.uid) return;
-    if (confirm(`Transfer Host (Admin) role to ${targetUser.name}?`)) {
+    const confirmed = await confirmCustom("Transfer Host Role", `Transfer Host (Admin) role to ${targetUser.name}? You will lose administrative privileges.`, "danger", "Transfer");
+    if (confirmed) {
       await updateDoc(doc(db, "rooms", roomId), {
         creatorId: targetUser.id,
         creatorName: targetUser.name
@@ -478,6 +482,7 @@ export default function RoomPage() {
           onClose={() => setShowExportModal(false)} 
         />
       )}
+      <CustomDialog {...dialogProps} />
     </div>
   );
 }
