@@ -23,7 +23,8 @@ import {
   Pause,
   RotateCcw,
   Sliders,
-  Check
+  Check,
+  GripHorizontal
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import jsPDF from "jspdf";
@@ -45,6 +46,8 @@ import {
   DragOverlay,
   closestCenter
 } from "@dnd-kit/core";
+import { useSortable, SortableContext, horizontalListSortingStrategy } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 interface RetroBoardProps {
   room: RoomData | null;
@@ -58,9 +61,42 @@ interface RetroBoardProps {
   avatar: string;
 }
 
-const getColumnColorTheme = (title: string) => {
+const hexToRgba = (hex: string, alpha: number) => {
+  const cleanHex = hex.replace("#", "");
+  const num = parseInt(cleanHex, 16);
+  const r = (num >> 16) & 255;
+  const g = (num >> 8) & 255;
+  const b = num & 255;
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+};
+
+const presetHexes: Record<string, string> = {
+  emerald: "#10b981",
+  rose: "#f43f5e",
+  amber: "#f59e0b",
+  sky: "#0ea5e9",
+  purple: "#a855f7",
+  default: "#71717a"
+};
+
+const getColumnColorTheme = (title: string, color?: string) => {
+  // If color is a preset name, resolve its hex
+  const activeColor = color && presetHexes[color] ? presetHexes[color] : color;
+  
+  if (activeColor && activeColor.startsWith("#")) {
+    return {
+      bg: "", // applied dynamically as style
+      border: "", // applied dynamically as style
+      glow: "", // applied dynamically as style
+      badge: "", // applied dynamically as style
+      titleColor: "text-zinc-900 dark:text-white",
+      line: "", // applied dynamically as style
+      customHex: activeColor
+    };
+  }
+
   const t = title.toLowerCase();
-  if (t.includes("well") || t.includes("good") || t.includes("happy") || t.includes("positive")) {
+  if (color === "emerald" || (!color && (t.includes("well") || t.includes("good") || t.includes("happy") || t.includes("positive")))) {
     return {
       bg: "bg-emerald-500/[0.015] dark:bg-emerald-500/[0.005]",
       border: "border-emerald-500/10 dark:border-emerald-500/5 hover:border-emerald-500/25 dark:hover:border-emerald-500/20",
@@ -70,7 +106,7 @@ const getColumnColorTheme = (title: string) => {
       line: "bg-emerald-500/50"
     };
   }
-  if (t.includes("improve") || t.includes("bad") || t.includes("sad") || t.includes("neg") || t.includes("concern")) {
+  if (color === "rose" || (!color && (t.includes("improve") || t.includes("bad") || t.includes("sad") || t.includes("neg") || t.includes("concern")))) {
     return {
       bg: "bg-rose-500/[0.015] dark:bg-rose-500/[0.005]",
       border: "border-rose-500/10 dark:border-rose-500/5 hover:border-rose-500/25 dark:hover:border-rose-500/20",
@@ -80,7 +116,7 @@ const getColumnColorTheme = (title: string) => {
       line: "bg-rose-500/50"
     };
   }
-  if (t.includes("action") || t.includes("task") || t.includes("todo")) {
+  if (color === "purple" || (!color && (t.includes("action") || t.includes("task") || t.includes("todo")))) {
     return {
       bg: "bg-purple-500/[0.015] dark:bg-purple-500/[0.005]",
       border: "border-purple-500/10 dark:border-purple-500/5 hover:border-purple-500/25 dark:hover:border-purple-500/20",
@@ -88,6 +124,26 @@ const getColumnColorTheme = (title: string) => {
       badge: "bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20",
       titleColor: "text-purple-950 dark:text-purple-50",
       line: "bg-purple-500/50"
+    };
+  }
+  if (color === "amber") {
+    return {
+      bg: "bg-amber-500/[0.015] dark:bg-amber-500/[0.005]",
+      border: "border-amber-500/10 dark:border-amber-500/5 hover:border-amber-500/25 dark:hover:border-amber-500/20",
+      glow: "shadow-[0_0_40px_-20px_rgba(245,158,11,0.05)] hover:shadow-[0_0_40px_-5px_rgba(245,158,11,0.1)]",
+      badge: "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20",
+      titleColor: "text-amber-950 dark:text-amber-50",
+      line: "bg-amber-500/50"
+    };
+  }
+  if (color === "sky") {
+    return {
+      bg: "bg-sky-500/[0.015] dark:bg-sky-500/[0.005]",
+      border: "border-sky-500/10 dark:border-sky-500/5 hover:border-sky-500/25 dark:hover:border-sky-500/20",
+      glow: "shadow-[0_0_40px_-20px_rgba(14,165,233,0.05)] hover:shadow-[0_0_40px_-5px_rgba(14,165,233,0.1)]",
+      badge: "bg-sky-500/10 text-sky-600 dark:text-sky-400 border-sky-500/20",
+      titleColor: "text-sky-950 dark:text-sky-50",
+      line: "bg-sky-500/50"
     };
   }
   return {
@@ -108,6 +164,12 @@ interface ColumnDroppableProps {
   renameColumn: (col: RetroColumn) => void;
   deleteColumn: (colId: string) => void;
   cardsCount: number;
+  isOverlay?: boolean;
+  dragHandleProps?: any;
+  setNodeRef?: (node: HTMLElement | null) => void;
+  style?: React.CSSProperties;
+  isDragging?: boolean;
+  isOver?: boolean;
 }
 
 function ColumnDroppable({ 
@@ -116,38 +178,85 @@ function ColumnDroppable({
   isAdmin, 
   renameColumn, 
   deleteColumn, 
-  cardsCount 
+  cardsCount,
+  isOverlay = false,
+  dragHandleProps = {},
+  setNodeRef,
+  style,
+  isDragging = false,
+  isOver = false
 }: ColumnDroppableProps) {
-  const { setNodeRef, isOver } = useDroppable({
-    id: col.id,
-  });
+  const [isHovered, setIsHovered] = useState(false);
+  const theme = getColumnColorTheme(col.title, col.color);
 
-  const theme = getColumnColorTheme(col.title);
+  // Dynamic style calculation for custom colors
+  const customStyles = theme.customHex ? {
+    backgroundColor: hexToRgba(theme.customHex, 0.015),
+    borderColor: isOver 
+      ? hexToRgba(theme.customHex, 0.5) 
+      : isHovered 
+        ? hexToRgba(theme.customHex, 0.25) 
+        : hexToRgba(theme.customHex, 0.1),
+    boxShadow: isOver
+      ? `0 0 45px -5px ${hexToRgba(theme.customHex, 0.15)}, inset 0 0 20px ${hexToRgba(theme.customHex, 0.05)}`
+      : isHovered 
+        ? `0 0 40px -5px ${hexToRgba(theme.customHex, 0.1)}` 
+        : `0 0 40px -20px ${hexToRgba(theme.customHex, 0.05)}`
+  } : {};
+
+  const badgeStyles = theme.customHex ? {
+    backgroundColor: hexToRgba(theme.customHex, 0.1),
+    color: theme.customHex,
+    borderColor: hexToRgba(theme.customHex, 0.2)
+  } : {};
+
+  const lineStyles = theme.customHex ? {
+    backgroundColor: theme.customHex
+  } : {};
 
   return (
     <div 
       ref={setNodeRef}
+      style={{ ...style, ...customStyles }}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
       className={cn(
-        "flex flex-col w-full lg:min-w-[320px] xl:min-w-[400px] 2xl:min-w-[500px] lg:w-[320px] xl:w-[400px] 2xl:w-[500px] shrink-0 group/col rounded-[2rem] p-4 border transition-all duration-300 hover:scale-[1.005] bg-white/60 dark:bg-white/[0.01] backdrop-blur-md",
-        theme.bg,
-        theme.border,
-        theme.glow,
-        isOver ? "ring-2 ring-indigo-500/30 dark:ring-indigo-500/20 border-dashed border-indigo-500 bg-indigo-50/20 dark:bg-indigo-950/20 shadow-inner" : ""
+        "flex flex-col w-full lg:min-w-[320px] xl:min-w-[400px] 2xl:min-w-[500px] lg:w-[320px] xl:w-[400px] 2xl:w-[500px] shrink-0 group/col rounded-[2rem] p-4 border transition-all duration-300 backdrop-blur-md",
+        !theme.customHex && theme.bg,
+        !theme.customHex && theme.border,
+        !theme.customHex && theme.glow,
+        isOver && !theme.customHex ? "ring-2 ring-indigo-500/30 dark:ring-indigo-500/20 border-dashed border-indigo-500 bg-indigo-50/20 dark:bg-indigo-950/20 shadow-inner" : "",
+        isDragging ? "opacity-30" : "",
+        isOverlay ? "scale-102 border-dashed border-indigo-500/30 bg-white/70 dark:bg-zinc-900/70" : "hover:scale-[1.005]"
       )}
     >
       <div className="flex items-center justify-between mb-4 lg:mb-6 px-2 lg:px-4">
         <div className="flex items-center gap-2.5 lg:gap-3.5">
-          <div className={cn("w-1.5 h-6 rounded-full transition-all group-hover/col:scale-y-110", theme.line)}></div>
+          <div 
+            style={lineStyles} 
+            className={cn("w-1.5 h-6 rounded-full transition-all group-hover/col:scale-y-110", !theme.customHex && theme.line)}
+          ></div>
           <h4 className={cn("text-base sm:text-lg lg:text-xl font-black tracking-tight", theme.titleColor)}>{col.title}</h4>
-          <span className={cn(
-            "text-[10px] sm:text-xs px-2.5 py-0.5 rounded-full border font-mono font-bold transition-all", 
-            theme.badge
-          )}>
+          <span 
+            style={badgeStyles}
+            className={cn(
+              "text-[10px] sm:text-xs px-2.5 py-0.5 rounded-full border font-mono font-bold transition-all", 
+              !theme.customHex && theme.badge
+            )}
+          >
             {cardsCount}
           </span>
         </div>
-        {isAdmin && (
+        {isAdmin && !isOverlay && (
           <div className="flex items-center gap-1 opacity-0 group-hover/col:opacity-100 transition-opacity">
+            <button 
+              type="button"
+              {...dragHandleProps} 
+              className="p-1.5 rounded-lg hover:bg-zinc-100 dark:hover:bg-white/5 hover:text-zinc-900 dark:hover:text-white text-zinc-400 dark:text-zinc-600 transition-all cursor-grab active:cursor-grabbing"
+              title="Drag Column"
+            >
+              <GripHorizontal className="h-4 w-4" />
+            </button>
             <button onClick={() => renameColumn(col)} className="p-1.5 rounded-lg hover:bg-zinc-100 dark:hover:bg-white/5 hover:text-zinc-900 dark:hover:text-white text-zinc-400 dark:text-zinc-600 transition-all cursor-pointer"><Settings className="h-4 w-4" /></button>
             <button onClick={() => deleteColumn(col.id)} className="p-1.5 rounded-lg hover:bg-red-500/10 hover:text-red-500 text-zinc-400 dark:text-zinc-600 transition-all cursor-pointer"><X className="h-4 w-4" /></button>
           </div>
@@ -158,6 +267,50 @@ function ColumnDroppable({
         {children}
       </div>
     </div>
+  );
+}
+
+function SortableColumnWrapper({
+  col,
+  children,
+  isAdmin,
+  renameColumn,
+  deleteColumn,
+  cardsCount
+}: ColumnDroppableProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+    isOver
+  } = useSortable({
+    id: `column-${col.id}`,
+    disabled: !isAdmin
+  });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  return (
+    <ColumnDroppable
+      col={col}
+      isAdmin={isAdmin}
+      renameColumn={renameColumn}
+      deleteColumn={deleteColumn}
+      cardsCount={cardsCount}
+      setNodeRef={setNodeRef}
+      style={style}
+      isDragging={isDragging}
+      isOver={isOver}
+      dragHandleProps={{ ...attributes, ...listeners }}
+    >
+      {children}
+    </ColumnDroppable>
   );
 }
 
@@ -181,6 +334,7 @@ export function RetroBoard({
   const [isExporting, setIsExporting] = useState(false);
   const boardRef = useRef<HTMLDivElement>(null);
   const [activeCardId, setActiveCardId] = useState<string | null>(null);
+  const [activeColumnIdDrag, setActiveColumnIdDrag] = useState<string | null>(null);
 
   // Timer Customization States
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
@@ -323,19 +477,43 @@ export function RetroBoard({
 
   const addColumn = async () => {
     if (!isAdmin) return;
-    const title = await promptCustom("Add Retro Column", "Enter the name for your new retro column:", "", "Column Title (e.g., Ideas, Risks)", "Create");
-    if (!title) return;
+    const res = await promptCustom(
+      "Add Retro Column", 
+      "Enter the name and choose a color for your new retro column:", 
+      "", 
+      "Column Title (e.g., Ideas, Risks)", 
+      "Create",
+      "Cancel",
+      true,
+      "default"
+    );
+    if (!res) return;
+    const { title, color } = res;
     await addDoc(collection(db, "rooms", roomId, "columns"), {
       title,
+      color,
       order: columns.length
     });
   };
 
   const renameColumn = async (col: RetroColumn) => {
     if (!isAdmin) return;
-    const newTitle = await promptCustom("Rename Column", "Enter the new title for this retro column:", col.title, "New Column Title", "Rename");
-    if (!newTitle) return;
-    await updateDoc(doc(db, "rooms", roomId, "columns", col.id), { title: newTitle });
+    const res = await promptCustom(
+      "Edit Column", 
+      "Enter the title and choose a color for this retro column:", 
+      col.title, 
+      "Column Title", 
+      "Save",
+      "Cancel",
+      true,
+      col.color || "default"
+    );
+    if (!res) return;
+    const { title, color } = res;
+    await updateDoc(doc(db, "rooms", roomId, "columns", col.id), { 
+      title,
+      color
+    });
   };
 
   const deleteColumn = async (colId: string) => {
@@ -403,15 +581,22 @@ export function RetroBoard({
 
   // Drag & Drop Handler
   const handleDragStart = (event: any) => {
-    setActiveCardId(event.active.id as string);
+    const activeId = event.active.id as string;
+    if (activeId.startsWith("column-")) {
+      setActiveColumnIdDrag(activeId.replace("column-", ""));
+    } else {
+      setActiveCardId(activeId);
+    }
   };
 
   const handleDragCancel = () => {
     setActiveCardId(null);
+    setActiveColumnIdDrag(null);
   };
 
   const handleDragEnd = async (event: DragEndEvent) => {
     setActiveCardId(null);
+    setActiveColumnIdDrag(null);
     const { active, over } = event;
     if (!over) return;
 
@@ -420,14 +605,45 @@ export function RetroBoard({
 
     if (activeId === overId) return;
 
-    // Check if over target is a column
-    const isTargetColumn = columns.some(c => c.id === overId);
+    // Case 1: Column dragging
+    if (activeId.startsWith("column-") && overId.startsWith("column-")) {
+      const activeColId = activeId.replace("column-", "");
+      const overColId = overId.replace("column-", "");
 
-    if (isTargetColumn) {
+      const activeIndex = columns.findIndex(c => c.id === activeColId);
+      const overIndex = columns.findIndex(c => c.id === overColId);
+
+      if (activeIndex !== -1 && overIndex !== -1) {
+        // Create new columns list locally
+        const newColumns = [...columns];
+        const [movedCol] = newColumns.splice(activeIndex, 1);
+        newColumns.splice(overIndex, 0, movedCol);
+
+        // Update orders in Firestore
+        const batchUpdates = newColumns.map((col, index) => {
+          if (col.order !== index) {
+            const ref = doc(db, "rooms", roomId, "columns", col.id);
+            return updateDoc(ref, { order: index });
+          }
+          return null;
+        }).filter(Boolean);
+
+        await Promise.all(batchUpdates);
+      }
+      return;
+    }
+
+    // Case 2: Card dragging
+    if (activeId.startsWith("column-")) return;
+
+    // Check if over target is a column
+    const overCol = columns.find(c => `column-${c.id}` === overId || c.id === overId);
+
+    if (overCol) {
       // Move to column & unmerge from any stack
       const ref = doc(db, "rooms", roomId, "cards", activeId);
       await updateDoc(ref, {
-        columnId: overId,
+        columnId: overCol.id,
         parentCardId: null
       });
     } else {
@@ -507,8 +723,8 @@ export function RetroBoard({
         : ""
     )}>
       
-      {/* Upper Dock: Session Title & Sync Countdown Timer */}
-      <div className="flex flex-col xl:flex-row items-stretch xl:items-center justify-between gap-4 bg-white/60 dark:bg-white/[0.02] border border-zinc-200 dark:border-white/5 p-4 lg:p-6 rounded-[1.5rem] xl:rounded-[2rem] shadow-sm">
+      {/* Upper Dock: Session Title & Actions Bar */}
+      <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 bg-white/60 dark:bg-white/[0.02] border border-zinc-200 dark:border-white/5 p-4 lg:p-6 rounded-[1.5rem] xl:rounded-[2rem] shadow-sm shrink-0">
         
         {/* Left Side: Session Title */}
         <div className="flex flex-col gap-1">
@@ -521,155 +737,156 @@ export function RetroBoard({
           <p className="text-zinc-500 text-[10px] lg:text-xs uppercase tracking-[0.3em] font-black font-mono mt-1">Archive sprint learnings with team priorities</p>
         </div>
 
-        {/* Center: Synchronized Countdown Timer */}
-        <div className="relative xl:mx-auto">
-          <div className="flex flex-col relative overflow-hidden bg-zinc-100/80 dark:bg-white/[0.02] border border-zinc-200 dark:border-white/5 p-3 rounded-2xl">
-            {timeLeft !== null && room.retroTimer?.status !== "idle" && (
-              <div className="absolute top-0 left-0 right-0 h-[3px] bg-zinc-200 dark:bg-white/5">
-                <div 
-                  className={cn(
-                    "h-full transition-all duration-1000 ease-linear",
-                    timeLeft <= 15 ? "bg-rose-500 animate-pulse" : timeLeft <= 60 ? "bg-amber-500" : "bg-indigo-500"
-                  )}
-                  style={{ width: `${progressPercent}%` }}
-                ></div>
-              </div>
-            )}
-            <div className="flex flex-wrap items-center gap-3">
-              <div className="flex items-center gap-2">
-                <Timer className={cn(
-                  "h-5 w-5 transition-all duration-300",
-                  timeLeft !== null && timeLeft > 0 && room.retroTimer?.status === "running" ? "text-indigo-500 animate-pulse" : "text-zinc-400",
-                  timeLeft !== null && timeLeft <= 30 && timeLeft > 0 && "text-rose-500 animate-bounce scale-110"
-                )} />
-                
-                <span className={cn(
-                  "font-mono font-black text-lg md:text-xl lg:text-2xl tracking-wider tabular-nums transition-colors duration-300",
-                  timeLeft === null ? "text-zinc-400" : "text-zinc-800 dark:text-white",
-                  timeLeft !== null && timeLeft <= 30 && timeLeft > 0 && "text-rose-500 animate-pulse font-black"
-                )}>
-                  {timeLeft !== null ? formatTime(timeLeft) : "00:00"}
-                </span>
+        {/* Right Side: Timer & Action Controls */}
+        <div className="flex flex-wrap items-center md:justify-end gap-3 md:gap-4">
+          {/* Synchronized Countdown Timer */}
+          <div className="relative">
+            <div className="flex flex-col relative overflow-hidden bg-zinc-100/80 dark:bg-white/[0.02] border border-zinc-200 dark:border-white/5 p-3 rounded-2xl">
+              {timeLeft !== null && room.retroTimer?.status !== "idle" && (
+                <div className="absolute top-0 left-0 right-0 h-[3px] bg-zinc-200 dark:bg-white/5">
+                  <div 
+                    className={cn(
+                      "h-full transition-all duration-1000 ease-linear",
+                      timeLeft <= 15 ? "bg-rose-500 animate-pulse" : timeLeft <= 60 ? "bg-amber-500" : "bg-indigo-500"
+                    )}
+                    style={{ width: `${progressPercent}%` }}
+                  ></div>
+                </div>
+              )}
+              <div className="flex flex-wrap items-center gap-3">
+                <div className="flex items-center gap-2">
+                  <Timer className={cn(
+                    "h-5 w-5 transition-all duration-300",
+                    timeLeft !== null && timeLeft > 0 && room.retroTimer?.status === "running" ? "text-indigo-500 animate-pulse" : "text-zinc-400",
+                    timeLeft !== null && timeLeft <= 30 && timeLeft > 0 && "text-rose-500 animate-bounce scale-110"
+                  )} />
+                  
+                  <span className={cn(
+                    "font-mono font-black text-lg md:text-xl lg:text-2xl tracking-wider tabular-nums transition-colors duration-300",
+                    timeLeft === null ? "text-zinc-400" : "text-zinc-800 dark:text-white",
+                    timeLeft !== null && timeLeft <= 30 && timeLeft > 0 && "text-rose-500 animate-pulse font-black"
+                  )}>
+                    {timeLeft !== null ? formatTime(timeLeft) : "00:00"}
+                  </span>
 
-                {timeLeft !== null && timeLeft === 0 && (
-                  <span className="text-[10px] font-black uppercase text-rose-500 animate-pulse px-2 py-0.5 bg-rose-500/10 rounded-md border border-rose-500/20">
-                    Time's Up!
+                  {timeLeft !== null && timeLeft === 0 && (
+                    <span className="text-[10px] font-black uppercase text-rose-500 animate-pulse px-2 py-0.5 bg-rose-500/10 rounded-md border border-rose-500/20">
+                      Time's Up!
+                    </span>
+                  )}
+                </div>
+
+                <div className="h-6 w-px bg-zinc-300 dark:bg-white/10"></div>
+
+                {/* Facilitator / Admin Timer Actions */}
+                {isAdmin ? (
+                  <div className="flex items-center gap-1.5">
+                    {room.retroTimer?.status === "running" ? (
+                      <button 
+                        onClick={pauseTimer}
+                        className="p-2 hover:bg-zinc-200 dark:hover:bg-white/10 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white rounded-lg transition-colors cursor-pointer"
+                        title="Pause Timer"
+                      >
+                        <Pause className="h-4 w-4" />
+                      </button>
+                    ) : room.retroTimer?.status === "paused" ? (
+                      <button 
+                        onClick={resumeTimer}
+                        className="p-2 bg-indigo-500 hover:bg-indigo-600 text-white rounded-lg transition-colors shadow-md shadow-indigo-500/15 cursor-pointer"
+                        title="Resume Timer"
+                      >
+                        <Play className="h-4 w-4 fill-white" />
+                      </button>
+                    ) : (
+                      <div className="flex items-center gap-1">
+                        <button 
+                          onClick={() => startTimer(60)}
+                          className="px-2 py-1 hover:bg-zinc-200 dark:hover:bg-white/10 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white text-[10px] font-black uppercase rounded-lg border border-zinc-200 dark:border-zinc-800/50 transition-all cursor-pointer"
+                        >
+                          1m
+                        </button>
+                        <button 
+                          onClick={() => startTimer(180)}
+                          className="px-2 py-1 hover:bg-zinc-200 dark:hover:bg-white/10 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white text-[10px] font-black uppercase rounded-lg border border-zinc-200 dark:border-zinc-800/50 transition-all cursor-pointer"
+                        >
+                          3m
+                        </button>
+                        <button 
+                          onClick={() => startTimer(300)}
+                          className="px-2 py-1 hover:bg-zinc-200 dark:hover:bg-white/10 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white text-[10px] font-black uppercase rounded-lg border border-zinc-200 dark:border-zinc-800/50 transition-all cursor-pointer"
+                        >
+                          5m
+                        </button>
+                        <button 
+                          onClick={() => startTimer(600)}
+                          className="px-2 py-1 hover:bg-zinc-200 dark:hover:bg-white/10 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white text-[10px] font-black uppercase rounded-lg border border-zinc-200 dark:border-zinc-800/50 transition-all cursor-pointer"
+                        >
+                          10m
+                        </button>
+                        <button 
+                          onClick={() => setShowCustomTimer(!showCustomTimer)}
+                          className={cn(
+                            "p-2 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white rounded-lg transition-all cursor-pointer",
+                            showCustomTimer ? "bg-indigo-500/10 text-indigo-500" : "hover:bg-zinc-200 dark:hover:bg-white/10"
+                          )}
+                          title="Customize Timer"
+                        >
+                          <Sliders className="h-4 w-4" />
+                        </button>
+                      </div>
+                    )}
+
+                    {room.retroTimer?.status && room.retroTimer?.status !== "idle" && (
+                      <button 
+                        onClick={resetTimer}
+                        className="p-2 hover:bg-zinc-200 dark:hover:bg-white/10 text-zinc-500 dark:text-zinc-400 hover:text-rose-500 rounded-lg transition-colors cursor-pointer"
+                        title="Reset Timer"
+                      >
+                        <RotateCcw className="h-4 w-4" />
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  <span className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest px-2">
+                    {room.retroTimer?.status === "running" ? "Running" : room.retroTimer?.status === "paused" ? "Paused" : "Timer Off"}
                   </span>
                 )}
               </div>
-
-              <div className="h-6 w-px bg-zinc-300 dark:bg-white/10"></div>
-
-              {/* Facilitator / Admin Timer Actions */}
-              {isAdmin ? (
-                <div className="flex items-center gap-1.5">
-                  {room.retroTimer?.status === "running" ? (
-                    <button 
-                      onClick={pauseTimer}
-                      className="p-2 hover:bg-zinc-200 dark:hover:bg-white/10 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white rounded-lg transition-colors cursor-pointer"
-                      title="Pause Timer"
-                    >
-                      <Pause className="h-4 w-4" />
-                    </button>
-                  ) : room.retroTimer?.status === "paused" ? (
-                    <button 
-                      onClick={resumeTimer}
-                      className="p-2 bg-indigo-500 hover:bg-indigo-600 text-white rounded-lg transition-colors shadow-md shadow-indigo-500/15 cursor-pointer"
-                      title="Resume Timer"
-                    >
-                      <Play className="h-4 w-4 fill-white" />
-                    </button>
-                  ) : (
-                    <div className="flex items-center gap-1">
-                      <button 
-                        onClick={() => startTimer(60)}
-                        className="px-2 py-1 hover:bg-zinc-200 dark:hover:bg-white/10 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white text-[10px] font-black uppercase rounded-lg border border-zinc-200 dark:border-zinc-800/50 transition-all cursor-pointer"
-                      >
-                        1m
-                      </button>
-                      <button 
-                        onClick={() => startTimer(180)}
-                        className="px-2 py-1 hover:bg-zinc-200 dark:hover:bg-white/10 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white text-[10px] font-black uppercase rounded-lg border border-zinc-200 dark:border-zinc-800/50 transition-all cursor-pointer"
-                      >
-                        3m
-                      </button>
-                      <button 
-                        onClick={() => startTimer(300)}
-                        className="px-2 py-1 hover:bg-zinc-200 dark:hover:bg-white/10 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white text-[10px] font-black uppercase rounded-lg border border-zinc-200 dark:border-zinc-800/50 transition-all cursor-pointer"
-                      >
-                        5m
-                      </button>
-                      <button 
-                        onClick={() => startTimer(600)}
-                        className="px-2 py-1 hover:bg-zinc-200 dark:hover:bg-white/10 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white text-[10px] font-black uppercase rounded-lg border border-zinc-200 dark:border-zinc-800/50 transition-all cursor-pointer"
-                      >
-                        10m
-                      </button>
-                      <button 
-                        onClick={() => setShowCustomTimer(!showCustomTimer)}
-                        className={cn(
-                          "p-2 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white rounded-lg transition-all cursor-pointer",
-                          showCustomTimer ? "bg-indigo-500/10 text-indigo-500" : "hover:bg-zinc-200 dark:hover:bg-white/10"
-                        )}
-                        title="Customize Timer"
-                      >
-                        <Sliders className="h-4 w-4" />
-                      </button>
-                    </div>
-                  )}
-
-                  {room.retroTimer?.status && room.retroTimer?.status !== "idle" && (
-                    <button 
-                      onClick={resetTimer}
-                      className="p-2 hover:bg-zinc-200 dark:hover:bg-white/10 text-zinc-500 dark:text-zinc-400 hover:text-rose-500 rounded-lg transition-colors cursor-pointer"
-                      title="Reset Timer"
-                    >
-                      <RotateCcw className="h-4 w-4" />
-                    </button>
-                  )}
-                </div>
-              ) : (
-                <span className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest px-2">
-                  {room.retroTimer?.status === "running" ? "Running" : room.retroTimer?.status === "paused" ? "Paused" : "Timer Off"}
-                </span>
-              )}
             </div>
+
+            {/* Custom Timer Input Dialog */}
+            {showCustomTimer && isAdmin && (
+              <div className="flex items-center gap-1.5 bg-white dark:bg-zinc-900 p-2 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-xl absolute top-full left-1/2 -translate-x-1/2 mt-2 z-50 animate-in zoom-in-95 duration-100">
+                <input
+                  type="number"
+                  value={customMin}
+                  onChange={e => setCustomMin(e.target.value)}
+                  min="0"
+                  placeholder="Min"
+                  className="w-12 bg-zinc-100 dark:bg-white/5 border border-zinc-200 dark:border-white/5 rounded-lg px-2 py-1 text-xs text-center font-bold"
+                />
+                <span className="text-zinc-400 font-bold">:</span>
+                <input
+                  type="number"
+                  value={customSec}
+                  onChange={e => setCustomSec(e.target.value)}
+                  min="0"
+                  max="59"
+                  placeholder="Sec"
+                  className="w-12 bg-zinc-100 dark:bg-white/5 border border-zinc-200 dark:border-white/5 rounded-lg px-2 py-1 text-xs text-center font-bold"
+                />
+                <button
+                  onClick={handleStartCustomTimer}
+                  className="p-1.5 bg-indigo-500 hover:bg-indigo-600 text-white rounded-lg transition-colors shadow-md shadow-indigo-500/10 cursor-pointer"
+                  title="Start custom timer"
+                >
+                  <Check className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            )}
           </div>
 
-          {/* Custom Timer Input Dialog */}
-          {showCustomTimer && isAdmin && (
-            <div className="flex items-center gap-1.5 bg-white dark:bg-zinc-900 p-2 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-xl absolute top-full left-1/2 -translate-x-1/2 mt-2 z-50 animate-in zoom-in-95 duration-100">
-              <input
-                type="number"
-                value={customMin}
-                onChange={e => setCustomMin(e.target.value)}
-                min="0"
-                placeholder="Min"
-                className="w-12 bg-zinc-100 dark:bg-white/5 border border-zinc-200 dark:border-white/5 rounded-lg px-2 py-1 text-xs text-center font-bold"
-              />
-              <span className="text-zinc-400 font-bold">:</span>
-              <input
-                type="number"
-                value={customSec}
-                onChange={e => setCustomSec(e.target.value)}
-                min="0"
-                max="59"
-                placeholder="Sec"
-                className="w-12 bg-zinc-100 dark:bg-white/5 border border-zinc-200 dark:border-white/5 rounded-lg px-2 py-1 text-xs text-center font-bold"
-              />
-              <button
-                onClick={handleStartCustomTimer}
-                className="p-1.5 bg-indigo-500 hover:bg-indigo-600 text-white rounded-lg transition-colors shadow-md shadow-indigo-500/10 cursor-pointer"
-                title="Start custom timer"
-              >
-                <Check className="h-3.5 w-3.5" />
-              </button>
-            </div>
-          )}
-        </div>
-        
-        {/* Right Side: Columns & PDF Export controls */}
-        <div className="flex items-center justify-end gap-2 sm:gap-3">
+          {/* New Column Button */}
           {isAdmin && (
             <button 
               onClick={addColumn}
@@ -679,7 +896,8 @@ export function RetroBoard({
               New Column
             </button>
           )}
-          
+
+          {/* Export controls */}
           <div className="flex items-center p-1 bg-zinc-100 dark:bg-white/5 rounded-xl border border-zinc-200 dark:border-white/10">
             <button 
               onClick={exportToCSV}
@@ -710,155 +928,157 @@ export function RetroBoard({
       >
         <div 
           ref={boardRef}
-          className="flex-1 flex flex-col lg:flex-row lg:flex-wrap gap-4 lg:gap-6 xl:gap-8 overflow-y-auto overflow-x-hidden p-2 sm:p-4 md:p-6 pb-24 md:pb-24 custom-scrollbar"
+          className="flex-1 flex flex-col lg:flex-row lg:flex-wrap gap-4 lg:gap-6 xl:gap-8 overflow-y-auto overflow-x-hidden p-2 sm:p-4 md:p-6 pb-24 md:pb-24 custom-scrollbar animate-in fade-in duration-300"
         >
-          {columns.map((col) => {
-            const colCards = mainCards.filter((c) => c.columnId === col.id);
-            const isActionItemColumn = col.title.toLowerCase().includes("action") || col.title.toLowerCase().includes("task");
+          <SortableContext items={columns.map(c => `column-${c.id}`)} strategy={horizontalListSortingStrategy}>
+            {columns.map((col) => {
+              const colCards = mainCards.filter((c) => c.columnId === col.id);
+              const isActionItemColumn = col.title.toLowerCase().includes("action") || col.title.toLowerCase().includes("task");
 
-            return (
-              <ColumnDroppable 
-                key={col.id} 
-                col={col} 
-                isAdmin={isAdmin}
-                renameColumn={renameColumn}
-                deleteColumn={deleteColumn}
-                cardsCount={colCards.length}
-              >
-                {colCards.map((card) => (
-                  <RetroCard
-                    key={card.id}
-                    card={card}
-                    roomId={roomId}
-                    isAdmin={isAdmin}
-                    currentUserId={currentUserId}
-                    displayName={displayName}
-                    avatar={avatar}
-                    users={users}
-                    mergedCards={cards.filter(c => c.parentCardId === card.id)}
-                    isActionItem={isActionItemColumn}
-                    onDeleteCard={deleteCard}
-                    onToggleUpvote={toggleUpvote}
-                  />
-                ))}
-                {/* Adding Retro Card UI */}
-                {activeColumnId === col.id ? (
-                  <div className="flex flex-col gap-4 rounded-2xl lg:rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-5 lg:p-6 shadow-md dark:shadow-2xl relative overflow-hidden transition-all duration-300 animate-in fade-in zoom-in-95 duration-200">
-                    <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 z-20"></div>
-                    
-                    <div className="relative rounded-2xl border border-zinc-200/80 dark:border-zinc-800 bg-zinc-50/30 dark:bg-zinc-950/40 p-4 focus-within:border-indigo-500/50 focus-within:ring-2 focus-within:ring-indigo-500/10 focus-within:bg-white dark:focus-within:bg-zinc-950/60 transition-all duration-300">
-                      <textarea 
-                        autoFocus
-                        placeholder="Type your thought..."
-                        className="w-full bg-transparent border-none text-zinc-900 dark:text-white text-sm md:text-base focus:outline-none resize-none min-h-[140px] custom-scrollbar placeholder-zinc-400 dark:placeholder-zinc-600 font-medium"
-                        value={newCardText}
-                        onChange={(e) => setNewCardText(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter" && !e.shiftKey) {
-                            e.preventDefault();
-                            addCard(col.id);
-                          }
-                        }}
-                      />
-                    </div>
-                    
-                    {newCardImage && (
-                      <div className="relative w-full min-h-[300px] rounded-xl overflow-hidden my-2 bg-black/40 border border-indigo-500/20">
-                        <Image 
-                          src={newCardImage} 
-                          alt="Preview" 
-                          fill
-                          unoptimized
-                          className="object-contain opacity-90 transition-opacity" 
-                        />
-                        <button 
-                          onClick={() => setNewCardImage("")}
-                          className="absolute top-1.5 right-1.5 bg-black/60 p-1.5 rounded-full text-white hover:bg-black transition-all cursor-pointer"
-                        >
-                          <X className="h-3 w-3" />
-                        </button>
-                      </div>
-                    )}
-                    
-                    {activeGifSearch === 'new' && (
-                      <div className="mt-2">
-                        <GifPicker 
-                          onSelect={(url) => {
-                            setNewCardImage(url);
-                            setActiveGifSearch(null);
-                          }} 
-                          onClose={() => setActiveGifSearch(null)} 
+              return (
+                <SortableColumnWrapper
+                  key={col.id} 
+                  col={col} 
+                  isAdmin={isAdmin}
+                  renameColumn={renameColumn}
+                  deleteColumn={deleteColumn}
+                  cardsCount={colCards.length}
+                >
+                  {colCards.map((card) => (
+                    <RetroCard
+                      key={card.id}
+                      card={card}
+                      roomId={roomId}
+                      isAdmin={isAdmin}
+                      currentUserId={currentUserId}
+                      displayName={displayName}
+                      avatar={avatar}
+                      users={users}
+                      mergedCards={cards.filter(c => c.parentCardId === card.id)}
+                      isActionItem={isActionItemColumn}
+                      onDeleteCard={deleteCard}
+                      onToggleUpvote={toggleUpvote}
+                    />
+                  ))}
+                  {/* Adding Retro Card UI */}
+                  {activeColumnId === col.id ? (
+                    <div className="flex flex-col gap-4 rounded-2xl lg:rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-5 lg:p-6 shadow-md dark:shadow-2xl relative overflow-hidden transition-all duration-300 animate-in fade-in zoom-in-95 duration-200">
+                      <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 z-20"></div>
+                      
+                      <div className="relative rounded-2xl border border-zinc-200/80 dark:border-zinc-800 bg-zinc-50/30 dark:bg-zinc-950/40 p-4 focus-within:border-indigo-500/50 focus-within:ring-2 focus-within:ring-indigo-500/10 focus-within:bg-white dark:focus-within:bg-zinc-950/60 transition-all duration-300">
+                        <textarea 
+                          autoFocus
+                          placeholder="Type your thought..."
+                          className="w-full bg-transparent border-none text-zinc-900 dark:text-white text-sm md:text-base focus:outline-none resize-none min-h-[140px] custom-scrollbar placeholder-zinc-400 dark:placeholder-zinc-600 font-medium"
+                          value={newCardText}
+                          onChange={(e) => setNewCardText(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" && !e.shiftKey) {
+                              e.preventDefault();
+                              addCard(col.id);
+                            }
+                          }}
                         />
                       </div>
-                    )}
+                      
+                      {newCardImage && (
+                        <div className="relative w-full min-h-[300px] rounded-xl overflow-hidden my-2 bg-black/40 border border-indigo-500/20">
+                          <Image 
+                            src={newCardImage} 
+                            alt="Preview" 
+                            fill
+                            unoptimized
+                            className="object-contain opacity-90 transition-opacity" 
+                          />
+                          <button 
+                            onClick={() => setNewCardImage("")}
+                            className="absolute top-1.5 right-1.5 bg-black/60 p-1.5 rounded-full text-white hover:bg-black transition-all cursor-pointer"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </div>
+                      )}
+                      
+                      {activeGifSearch === 'new' && (
+                        <div className="mt-2">
+                          <GifPicker 
+                            onSelect={(url) => {
+                              setNewCardImage(url);
+                              setActiveGifSearch(null);
+                            }} 
+                            onClose={() => setActiveGifSearch(null)} 
+                          />
+                        </div>
+                      )}
 
-                    <div className="flex items-center justify-between gap-3 pt-4 border-t border-zinc-200 dark:border-zinc-800 w-full overflow-x-auto scrollbar-none py-1">
-                      <div className="flex items-center gap-2 shrink-0">
-                        <label 
-                          title="Upload Image"
-                          className="h-10 px-4 rounded-xl transition-all flex items-center justify-center gap-2 bg-zinc-100 dark:bg-white/5 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-200 dark:hover:bg-white/10 hover:border-zinc-300 dark:hover:border-zinc-700 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 cursor-pointer active:scale-95 border border-zinc-200/50 dark:border-white/5 text-[11px] font-black uppercase tracking-wider whitespace-nowrap shrink-0"
-                        >
-                          <UploadCloud className="h-4 w-4" />
-                          <span className="text-[11px] font-black uppercase tracking-wider">Image</span>
-                          <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
-                        </label>
-                        <button 
-                          title="Add GIF"
-                          onClick={() => {
-                            setActiveGifSearch(activeGifSearch === 'new' ? null : 'new');
-                          }}
-                          className={cn(
-                            "h-10 px-4 rounded-xl transition-all flex items-center justify-center border border-zinc-200/50 dark:border-white/5 active:scale-95 text-[11px] font-black uppercase tracking-wider cursor-pointer whitespace-nowrap shrink-0",
-                            activeGifSearch === 'new' 
-                              ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/20 border-transparent" 
-                              : "bg-zinc-100 dark:bg-white/5 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-200 dark:hover:bg-white/10 hover:border-zinc-300 dark:hover:border-zinc-700 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-500/10"
-                          )}
-                        >
-                          <span className="text-[11px] font-black uppercase tracking-wider">GIF</span>
-                        </button>
-                      </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        <button 
-                          onClick={() => {
-                            setActiveColumnId(null);
-                            setNewCardText("");
-                            setNewCardImage("");
-                            setActiveGifSearch(null);
-                          }}
-                          title="Cancel"
-                          aria-label="Cancel"
-                          className="w-10 h-10 flex items-center justify-center text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition-all cursor-pointer hover:bg-zinc-100 dark:hover:bg-white/5 rounded-xl active:scale-95 whitespace-nowrap shrink-0"
-                        >
-                          <X className="h-5 w-5" />
-                          <span className="sr-only">Cancel</span>
-                        </button>
-                        <button 
-                          onClick={() => addCard(col.id)} 
-                          title="Post Insight"
-                          aria-label="Post Insight"
-                          className="bg-indigo-600 hover:bg-indigo-500 text-white w-10 h-10 rounded-xl active:scale-95 shadow-lg shadow-indigo-500/20 transition-all cursor-pointer flex items-center justify-center whitespace-nowrap shrink-0"
-                        >
-                          <Plus className="h-5 w-5" />
-                          <span className="sr-only">Post Insight</span>
-                        </button>
+                      <div className="flex items-center justify-between gap-3 pt-4 border-t border-zinc-200 dark:border-zinc-800 w-full overflow-x-auto scrollbar-none py-1">
+                        <div className="flex items-center gap-2 shrink-0">
+                          <label 
+                            title="Upload Image"
+                            className="h-10 px-4 rounded-xl transition-all flex items-center justify-center gap-2 bg-zinc-100 dark:bg-white/5 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-200 dark:hover:bg-white/10 hover:border-zinc-300 dark:hover:border-zinc-700 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 cursor-pointer active:scale-95 border border-zinc-200/50 dark:border-white/5 text-[11px] font-black uppercase tracking-wider whitespace-nowrap shrink-0"
+                          >
+                            <UploadCloud className="h-4 w-4" />
+                            <span className="text-[11px] font-black uppercase tracking-wider">Image</span>
+                            <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
+                          </label>
+                          <button 
+                            title="Add GIF"
+                            onClick={() => {
+                              setActiveGifSearch(activeGifSearch === 'new' ? null : 'new');
+                            }}
+                            className={cn(
+                              "h-10 px-4 rounded-xl transition-all flex items-center justify-center border border-zinc-200/50 dark:border-white/5 active:scale-95 text-[11px] font-black uppercase tracking-wider cursor-pointer whitespace-nowrap shrink-0",
+                              activeGifSearch === 'new' 
+                                ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/20 border-transparent" 
+                                : "bg-zinc-100 dark:bg-white/5 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-200 dark:hover:bg-white/10 hover:border-zinc-300 dark:hover:border-zinc-700 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-500/10"
+                            )}
+                          >
+                            <span className="text-[11px] font-black uppercase tracking-wider">GIF</span>
+                          </button>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <button 
+                            onClick={() => {
+                              setActiveColumnId(null);
+                              setNewCardText("");
+                              setNewCardImage("");
+                              setActiveGifSearch(null);
+                            }}
+                            title="Cancel"
+                            aria-label="Cancel"
+                            className="w-10 h-10 flex items-center justify-center text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition-all cursor-pointer hover:bg-zinc-100 dark:hover:bg-white/5 rounded-xl active:scale-95 whitespace-nowrap shrink-0"
+                          >
+                            <X className="h-5 w-5" />
+                            <span className="sr-only">Cancel</span>
+                          </button>
+                          <button 
+                            onClick={() => addCard(col.id)} 
+                            title="Post Insight"
+                            aria-label="Post Insight"
+                            className="bg-indigo-600 hover:bg-indigo-500 text-white w-10 h-10 rounded-xl active:scale-95 shadow-lg shadow-indigo-500/20 transition-all cursor-pointer flex items-center justify-center whitespace-nowrap shrink-0"
+                          >
+                            <Plus className="h-5 w-5" />
+                            <span className="sr-only">Post Insight</span>
+                          </button>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ) : (
-                  <button 
-                    onClick={() => {
-                      setActiveColumnId(col.id);
-                      setNewCardText("");
-                    }}
-                    className="flex h-12 lg:h-16 items-center justify-center gap-2 lg:gap-3 rounded-xl lg:rounded-2xl border-2 border-dashed border-zinc-200 dark:border-white/10 bg-white/60 dark:bg-white/[0.02] text-zinc-500 dark:text-zinc-400 hover:border-indigo-500/50 hover:bg-indigo-50/50 dark:hover:bg-indigo-500/5 hover:text-indigo-600 dark:hover:text-indigo-400 transition-all group active:scale-95 cursor-pointer"
-                  >
-                    <Plus className="h-4 w-4 lg:h-5 lg:w-5 transition-transform group-hover:scale-125" />
-                    <span className="font-bold text-xs lg:text-sm uppercase tracking-widest">Add a card</span>
-                  </button>
-                )}
-              </ColumnDroppable>
-            );
-          })}
+                  ) : (
+                    <button 
+                      onClick={() => {
+                        setActiveColumnId(col.id);
+                        setNewCardText("");
+                      }}
+                      className="flex h-12 lg:h-16 items-center justify-center gap-2 lg:gap-3 rounded-xl lg:rounded-2xl border-2 border-dashed border-zinc-200 dark:border-white/10 bg-white/60 dark:bg-white/[0.02] text-zinc-500 dark:text-zinc-400 hover:border-indigo-500/50 hover:bg-indigo-50/50 dark:hover:bg-indigo-500/5 hover:text-indigo-600 dark:hover:text-indigo-400 transition-all group active:scale-95 cursor-pointer"
+                    >
+                      <Plus className="h-4 w-4 lg:h-5 lg:w-5 transition-transform group-hover:scale-125" />
+                      <span className="font-bold text-xs lg:text-sm uppercase tracking-widest">Add a card</span>
+                    </button>
+                  )}
+                </SortableColumnWrapper>
+              );
+            })}
+          </SortableContext>
         </div>
 
         <DragOverlay adjustScale={false} dropAnimation={null}>
@@ -883,6 +1103,43 @@ export function RetroBoard({
                     onToggleUpvote={async () => {}}
                     isOverlay={true}
                   />
+                );
+              })()}
+            </div>
+          ) : activeColumnIdDrag ? (
+            <div className="rotate-[1deg] scale-[1.01] shadow-2xl opacity-95 cursor-grabbing pointer-events-none w-[320px] xl:w-[400px] 2xl:w-[500px] max-h-[80vh] flex flex-col">
+              {(() => {
+                const col = columns.find(c => c.id === activeColumnIdDrag);
+                if (!col) return null;
+                const colCards = mainCards.filter((c) => c.columnId === col.id);
+                const isActionItemColumn = col.title.toLowerCase().includes("action") || col.title.toLowerCase().includes("task");
+                return (
+                  <ColumnDroppable
+                    col={col}
+                    isAdmin={isAdmin}
+                    renameColumn={() => {}}
+                    deleteColumn={() => {}}
+                    cardsCount={colCards.length}
+                    isOverlay={true}
+                  >
+                    {colCards.map((card) => (
+                      <RetroCard
+                        key={card.id}
+                        card={card}
+                        roomId={roomId}
+                        isAdmin={isAdmin}
+                        currentUserId={currentUserId}
+                        displayName={displayName}
+                        avatar={avatar}
+                        users={users}
+                        mergedCards={cards.filter(c => c.parentCardId === card.id)}
+                        isActionItem={isActionItemColumn}
+                        onDeleteCard={async () => {}}
+                        onToggleUpvote={async () => {}}
+                        isOverlay={true}
+                      />
+                    ))}
+                  </ColumnDroppable>
                 );
               })()}
             </div>

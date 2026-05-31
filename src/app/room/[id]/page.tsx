@@ -337,10 +337,15 @@ export default function RoomPage() {
     if (tab === "retro" && roomId) {
       const colSnap = await getDocs(collection(db, "rooms", roomId, "columns"));
       if (colSnap.empty) {
-        const defaults = ["What went well", "What could be improved", "Action Items"];
+        const defaults = [
+          { title: "What went well", color: "emerald" },
+          { title: "What could be improved", color: "rose" },
+          { title: "Action Items", color: "purple" }
+        ];
         for (let i = 0; i < defaults.length; i++) {
           await addDoc(collection(db, "rooms", roomId, "columns"), {
-            title: defaults[i],
+            title: defaults[i].title,
+            color: defaults[i].color,
             order: i
           });
         }

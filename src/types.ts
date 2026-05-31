@@ -49,6 +49,7 @@ export interface RetroColumn {
   id: string;
   title: string;
   order: number;
+  color?: string;
 }
 
 export interface RetroCard {

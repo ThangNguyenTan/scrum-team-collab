@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
-import { X, AlertTriangle, HelpCircle, Info } from "lucide-react";
+import { X, AlertTriangle, HelpCircle, Info, Check, Pipette } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export interface DialogOptions {
@@ -13,12 +13,14 @@ export interface DialogOptions {
   confirmText?: string;
   cancelText?: string;
   variant?: 'primary' | 'danger' | 'success';
+  showColorPicker?: boolean;
+  defaultColor?: string;
 }
 
 interface CustomDialogComponentProps {
   isOpen: boolean;
   options: DialogOptions;
-  onConfirm: (value?: string) => void;
+  onConfirm: (value?: string, color?: string) => void;
   onCancel: () => void;
 }
 
@@ -29,12 +31,30 @@ export function CustomDialog({
   onCancel
 }: CustomDialogComponentProps) {
   const [inputValue, setInputValue] = useState("");
+  const [selectedColor, setSelectedColor] = useState("default");
   const inputRef = useRef<HTMLInputElement>(null);
+  const colorInputRef = useRef<HTMLInputElement | null>(null);
+
+  const handleNativeColorChange = useCallback((e: Event) => {
+    const target = e.target as HTMLInputElement;
+    setSelectedColor(target.value);
+  }, []);
+
+  const colorInputCallbackRef = useCallback((node: HTMLInputElement | null) => {
+    if (colorInputRef.current) {
+      colorInputRef.current.removeEventListener("change", handleNativeColorChange);
+    }
+    colorInputRef.current = node;
+    if (node) {
+      node.addEventListener("change", handleNativeColorChange);
+    }
+  }, [handleNativeColorChange]);
 
   // Sync state and focus on prompt opening
   useEffect(() => {
     if (isOpen) {
       setInputValue(options.defaultValue || "");
+      setSelectedColor(options.defaultColor || "default");
       if (options.type === "prompt") {
         // Delay slightly for render cycles to complete
         setTimeout(() => {
@@ -43,7 +63,7 @@ export function CustomDialog({
         }, 50);
       }
     }
-  }, [isOpen, options.defaultValue, options.type]);
+  }, [isOpen, options.defaultValue, options.defaultColor, options.type]);
 
   if (!isOpen) return null;
 
@@ -56,7 +76,10 @@ export function CustomDialog({
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter") {
       e.preventDefault();
-      onConfirm(options.type === "prompt" ? inputValue : undefined);
+      onConfirm(
+        options.type === "prompt" ? inputValue : undefined,
+        options.type === "prompt" && options.showColorPicker ? selectedColor : undefined
+      );
     } else if (e.key === "Escape") {
       e.preventDefault();
       onCancel();
@@ -117,7 +140,7 @@ export function CustomDialog({
 
         {/* Prompt Input */}
         {options.type === "prompt" && (
-          <div className="px-1">
+          <div className="px-1 flex flex-col gap-4">
             <input 
               ref={inputRef}
               type="text"
@@ -126,6 +149,79 @@ export function CustomDialog({
               placeholder={options.placeholder || "Enter value..."}
               className="w-full h-12 rounded-xl bg-zinc-100 dark:bg-white/5 border border-zinc-200 dark:border-white/10 px-4 text-zinc-900 dark:text-white font-bold placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all text-sm"
             />
+            {options.showColorPicker && (
+              <div className="flex flex-col gap-2">
+                <label className="text-[10px] font-black uppercase tracking-wider text-zinc-400 dark:text-zinc-500">
+                  Select Column Color
+                </label>
+                <div className="flex flex-wrap items-center gap-2.5">
+                  {[
+                    { id: 'default', name: 'Gray', class: 'bg-zinc-400 dark:bg-zinc-600 ring-zinc-500/30' },
+                    { id: 'emerald', name: 'Green', class: 'bg-emerald-500 ring-emerald-500/30' },
+                    { id: 'rose', name: 'Red', class: 'bg-rose-500 ring-rose-500/30' },
+                    { id: 'amber', name: 'Orange', class: 'bg-amber-500 ring-amber-500/30' },
+                    { id: 'sky', name: 'Blue', class: 'bg-sky-500 ring-sky-500/30' },
+                    { id: 'purple', name: 'Purple', class: 'bg-purple-500 ring-purple-500/30' },
+                  ].map((color) => (
+                    <button
+                      key={color.id}
+                      type="button"
+                      onClick={() => setSelectedColor(color.id)}
+                      className={cn(
+                        "w-8 h-8 rounded-full flex items-center justify-center transition-all duration-200 hover:scale-110 cursor-pointer border-2 border-white dark:border-zinc-900 shadow-md",
+                        color.class,
+                        selectedColor === color.id ? "ring-2 ring-indigo-500 ring-offset-2 dark:ring-offset-zinc-900 scale-105" : "opacity-80 hover:opacity-100"
+                      )}
+                      title={color.name}
+                    >
+                      {selectedColor === color.id && <Check className="w-4 h-4 text-white font-bold" />}
+                    </button>
+                  ))}
+
+                  {/* Custom color picker */}
+                  {(() => {
+                    const presetIds = ['default', 'emerald', 'rose', 'amber', 'sky', 'purple'];
+                    const isCustomColor = !presetIds.includes(selectedColor);
+                    return (
+                      <div className="relative">
+                        <button
+                          id="custom-color-btn"
+                          type="button"
+                          onClick={() => colorInputRef.current?.click()}
+                          style={{ background: isCustomColor ? selectedColor : undefined }}
+                          className={cn(
+                            "w-8 h-8 rounded-full flex items-center justify-center transition-all duration-200 hover:scale-110 cursor-pointer border-2 border-white dark:border-zinc-900 shadow-md",
+                            isCustomColor 
+                              ? "ring-2 ring-indigo-500 ring-offset-2 dark:ring-offset-zinc-900 scale-105" 
+                              : "bg-gradient-to-tr from-pink-500 via-purple-500 to-indigo-500 opacity-80 hover:opacity-100 text-white"
+                          )}
+                          title="Custom Color"
+                        >
+                          {isCustomColor ? (
+                            <Check className={cn("w-4 h-4 font-bold", getContrastColor(selectedColor))} />
+                          ) : (
+                            <Pipette className="w-4 h-4" />
+                          )}
+                        </button>
+                        <input
+                          ref={colorInputCallbackRef}
+                          type="color"
+                          value={isCustomColor ? selectedColor : "#4f46e5"}
+                          onInput={(e) => {
+                            const newColor = e.currentTarget.value;
+                            const btn = document.getElementById("custom-color-btn");
+                            if (btn) {
+                              btn.style.background = newColor;
+                            }
+                          }}
+                          className="absolute inset-0 w-0 h-0 opacity-0 pointer-events-none"
+                        />
+                      </div>
+                    );
+                  })()}
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -141,7 +237,10 @@ export function CustomDialog({
           )}
           
           <button
-            onClick={() => onConfirm(options.type === "prompt" ? inputValue : undefined)}
+            onClick={() => onConfirm(
+              options.type === "prompt" ? inputValue : undefined,
+              options.type === "prompt" && options.showColorPicker ? selectedColor : undefined
+            )}
             className={cn(
               "h-11 px-5 rounded-xl text-xs font-black uppercase tracking-wider text-white transition-all active:scale-[0.98] shadow-lg cursor-pointer",
               isDanger 
@@ -211,7 +310,9 @@ export function useCustomDialog() {
     defaultValue = '', 
     placeholder = '', 
     confirmText = 'Submit',
-    cancelText = 'Cancel'
+    cancelText = 'Cancel',
+    showColorPicker = false,
+    defaultColor = 'default'
   ) => {
     return showDialog({
       type: 'prompt',
@@ -220,15 +321,21 @@ export function useCustomDialog() {
       defaultValue,
       placeholder,
       confirmText,
-      cancelText
-    }) as Promise<string | null>;
+      cancelText,
+      showColorPicker,
+      defaultColor
+    }) as Promise<any>;
   }, [showDialog]);
 
-  const handleConfirm = useCallback((value?: string) => {
+  const handleConfirm = useCallback((value?: string, color?: string) => {
     setIsOpen(false);
     if (resolveRef.current) {
       if (options.type === 'prompt') {
-        resolveRef.current(value ?? null);
+        if (options.showColorPicker) {
+          resolveRef.current({ title: value ?? "", color: color ?? "default" });
+        } else {
+          resolveRef.current(value ?? null);
+        }
       } else if (options.type === 'confirm') {
         resolveRef.current(true);
       } else {
@@ -236,7 +343,7 @@ export function useCustomDialog() {
       }
       resolveRef.current = null;
     }
-  }, [options.type]);
+  }, [options.type, options.showColorPicker]);
 
   const handleCancel = useCallback(() => {
     setIsOpen(false);
@@ -265,4 +372,19 @@ export function useCustomDialog() {
     promptCustom,
     dialogProps
   };
+}
+
+// Helper to determine if a hex color is light or dark
+function getContrastColor(hexColor: string) {
+  if (!hexColor || !hexColor.startsWith("#")) return "text-white";
+  try {
+    const hex = hexColor.replace("#", "");
+    const r = parseInt(hex.substring(0, 2), 16);
+    const g = parseInt(hex.substring(2, 4), 16);
+    const b = parseInt(hex.substring(4, 6), 16);
+    const yiq = (r * 299 + g * 587 + b * 114) / 1000;
+    return yiq >= 140 ? "text-zinc-950" : "text-white";
+  } catch (e) {
+    return "text-white";
+  }
 }
