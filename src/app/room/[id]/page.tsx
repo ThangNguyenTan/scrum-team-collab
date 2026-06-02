@@ -448,7 +448,9 @@ export default function RoomPage() {
               roomId={roomId}
               users={users}
               columns={columns}
+              setColumns={setColumns}
               cards={cards}
+              setCards={setCards}
               isAdmin={isAdmin}
               currentUserId={user?.uid || ""}
               displayName={displayName}

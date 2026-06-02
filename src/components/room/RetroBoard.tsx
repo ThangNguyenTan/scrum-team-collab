@@ -54,7 +54,9 @@ interface RetroBoardProps {
   roomId: string;
   users: RoomUser[];
   columns: RetroColumn[];
+  setColumns?: React.Dispatch<React.SetStateAction<RetroColumn[]>>;
   cards: RetroCardType[];
+  setCards?: React.Dispatch<React.SetStateAction<RetroCardType[]>>;
   isAdmin: boolean;
   currentUserId: string;
   displayName: string;
@@ -170,6 +172,31 @@ interface ColumnDroppableProps {
   style?: React.CSSProperties;
   isDragging?: boolean;
   isOver?: boolean;
+  isDraggingAny?: boolean;
+}
+
+class SmartPointerSensor extends PointerSensor {
+  static exhibitors = [
+    {
+      eventName: 'onPointerDown' as const,
+      handler: ({ nativeEvent }: { nativeEvent: any }) => {
+        const target = nativeEvent.target as HTMLElement;
+        if (!target) return true;
+        if (
+          target.tagName === 'INPUT' ||
+          target.tagName === 'TEXTAREA' ||
+          target.tagName === 'BUTTON' ||
+          target.tagName === 'SELECT' ||
+          target.closest('button') ||
+          target.closest('a') ||
+          target.closest('.no-drag')
+        ) {
+          return false;
+        }
+        return true;
+      },
+    },
+  ];
 }
 
 function ColumnDroppable({ 
@@ -184,7 +211,8 @@ function ColumnDroppable({
   setNodeRef,
   style,
   isDragging = false,
-  isOver = false
+  isOver = false,
+  isDraggingAny = false
 }: ColumnDroppableProps) {
   const [isHovered, setIsHovered] = useState(false);
   const theme = getColumnColorTheme(col.title, col.color);
@@ -200,7 +228,7 @@ function ColumnDroppable({
     boxShadow: isOver
       ? `0 0 45px -5px ${hexToRgba(theme.customHex, 0.15)}, inset 0 0 20px ${hexToRgba(theme.customHex, 0.05)}`
       : isHovered 
-        ? `0 0 40px -5px ${hexToRgba(theme.customHex, 0.1)}` 
+        ? `0 0 40px -5px ${hexToRgba(theme.customHex, 0.15)}` 
         : `0 0 40px -20px ${hexToRgba(theme.customHex, 0.05)}`
   } : {};
 
@@ -220,14 +248,16 @@ function ColumnDroppable({
       style={{ ...style, ...customStyles }}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
+      {...dragHandleProps}
       className={cn(
-        "flex flex-col w-full lg:min-w-[320px] xl:min-w-[400px] 2xl:min-w-[500px] lg:w-[320px] xl:w-[400px] 2xl:w-[500px] shrink-0 group/col rounded-[2rem] p-4 border transition-all duration-300 backdrop-blur-md",
+        "flex flex-col w-full lg:min-w-[320px] xl:min-w-[400px] 2xl:min-w-[500px] lg:w-[320px] xl:w-[400px] 2xl:w-[500px] shrink-0 group/col rounded-[2rem] p-4 border backdrop-blur-md cursor-default",
         !theme.customHex && theme.bg,
         !theme.customHex && theme.border,
         !theme.customHex && theme.glow,
         isOver && !theme.customHex ? "ring-2 ring-indigo-500/30 dark:ring-indigo-500/20 border-dashed border-indigo-500 bg-indigo-50/20 dark:bg-indigo-950/20 shadow-inner" : "",
         isDragging ? "opacity-30" : "",
-        isOverlay ? "scale-102 border-dashed border-indigo-500/30 bg-white/70 dark:bg-zinc-900/70" : "hover:scale-[1.005]"
+        isOverlay ? "scale-102 border-dashed border-indigo-500/30 bg-white/70 dark:bg-zinc-900/70" : "hover:scale-[1.005]",
+        isDraggingAny || isDragging || isOverlay ? "transition-none" : "transition-all duration-300"
       )}
     >
       <div className="flex items-center justify-between mb-4 lg:mb-6 px-2 lg:px-4">
@@ -248,15 +278,7 @@ function ColumnDroppable({
           </span>
         </div>
         {isAdmin && !isOverlay && (
-          <div className="flex items-center gap-1 opacity-0 group-hover/col:opacity-100 transition-opacity">
-            <button 
-              type="button"
-              {...dragHandleProps} 
-              className="p-1.5 rounded-lg hover:bg-zinc-100 dark:hover:bg-white/5 hover:text-zinc-900 dark:hover:text-white text-zinc-400 dark:text-zinc-600 transition-all cursor-grab active:cursor-grabbing"
-              title="Drag Column"
-            >
-              <GripHorizontal className="h-4 w-4" />
-            </button>
+          <div className="flex items-center gap-1 opacity-0 group-hover/col:opacity-100 transition-opacity no-drag">
             <button onClick={() => renameColumn(col)} className="p-1.5 rounded-lg hover:bg-zinc-100 dark:hover:bg-white/5 hover:text-zinc-900 dark:hover:text-white text-zinc-400 dark:text-zinc-600 transition-all cursor-pointer"><Settings className="h-4 w-4" /></button>
             <button onClick={() => deleteColumn(col.id)} className="p-1.5 rounded-lg hover:bg-red-500/10 hover:text-red-500 text-zinc-400 dark:text-zinc-600 transition-all cursor-pointer"><X className="h-4 w-4" /></button>
           </div>
@@ -276,8 +298,9 @@ function SortableColumnWrapper({
   isAdmin,
   renameColumn,
   deleteColumn,
-  cardsCount
-}: ColumnDroppableProps) {
+  cardsCount,
+  isDraggingAny
+}: ColumnDroppableProps & { isDraggingAny: boolean }) {
   const {
     attributes,
     listeners,
@@ -292,7 +315,7 @@ function SortableColumnWrapper({
   });
 
   const style = {
-    transform: CSS.Transform.toString(transform),
+    transform: isDragging ? undefined : CSS.Transform.toString(transform),
     transition,
   };
 
@@ -307,6 +330,7 @@ function SortableColumnWrapper({
       style={style}
       isDragging={isDragging}
       isOver={isOver}
+      isDraggingAny={isDraggingAny}
       dragHandleProps={{ ...attributes, ...listeners }}
     >
       {children}
@@ -319,7 +343,9 @@ export function RetroBoard({
   roomId, 
   users, 
   columns, 
+  setColumns,
   cards, 
+  setCards,
   isAdmin, 
   currentUserId, 
   displayName, 
@@ -336,6 +362,8 @@ export function RetroBoard({
   const [activeCardId, setActiveCardId] = useState<string | null>(null);
   const [activeColumnIdDrag, setActiveColumnIdDrag] = useState<string | null>(null);
 
+  const isDraggingAny = activeCardId !== null || activeColumnIdDrag !== null;
+
   // Timer Customization States
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
   const [showCustomTimer, setShowCustomTimer] = useState(false);
@@ -343,11 +371,12 @@ export function RetroBoard({
   const [customSec, setCustomSec] = useState("0");
   const hasChimed = useRef(false);
 
-  // Pointer constraint sensor so clicks inside textarea/buttons are not treated as drag starts
+  // Pointer constraint sensor so drag starts only after click and hold for 0.3 seconds (300ms)
   const sensors = useSensors(
-    useSensor(PointerSensor, {
+    useSensor(SmartPointerSensor, {
       activationConstraint: {
-        distance: 8,
+        delay: 300,
+        tolerance: 5,
       },
     })
   );
@@ -498,6 +527,22 @@ export function RetroBoard({
 
   const renameColumn = async (col: RetroColumn) => {
     if (!isAdmin) return;
+    
+    // Resolve implicit color if col.color is not set
+    let activeColor = col.color;
+    if (!activeColor) {
+      const t = col.title.toLowerCase();
+      if (t.includes("well") || t.includes("good") || t.includes("happy") || t.includes("positive")) {
+        activeColor = "emerald";
+      } else if (t.includes("improve") || t.includes("bad") || t.includes("sad") || t.includes("neg") || t.includes("concern")) {
+        activeColor = "rose";
+      } else if (t.includes("action") || t.includes("task") || t.includes("todo")) {
+        activeColor = "purple";
+      } else {
+        activeColor = "default";
+      }
+    }
+
     const res = await promptCustom(
       "Edit Column", 
       "Enter the title and choose a color for this retro column:", 
@@ -506,7 +551,7 @@ export function RetroBoard({
       "Save",
       "Cancel",
       true,
-      col.color || "default"
+      activeColor
     );
     if (!res) return;
     const { title, color } = res;
@@ -619,6 +664,11 @@ export function RetroBoard({
         const [movedCol] = newColumns.splice(activeIndex, 1);
         newColumns.splice(overIndex, 0, movedCol);
 
+        // Optimistically update columns state
+        if (setColumns) {
+          setColumns(newColumns);
+        }
+
         // Update orders in Firestore
         const batchUpdates = newColumns.map((col, index) => {
           if (col.order !== index) {
@@ -641,6 +691,9 @@ export function RetroBoard({
 
     if (overCol) {
       // Move to column & unmerge from any stack
+      if (setCards) {
+        setCards(prev => prev.map(c => c.id === activeId ? { ...c, columnId: overCol.id, parentCardId: null } : c));
+      }
       const ref = doc(db, "rooms", roomId, "cards", activeId);
       await updateDoc(ref, {
         columnId: overCol.id,
@@ -653,6 +706,9 @@ export function RetroBoard({
         // Prevent stacking a card under a child card (only parent level stacking)
         const parentId = targetCard.parentCardId || targetCard.id;
         
+        if (setCards) {
+          setCards(prev => prev.map(c => c.id === activeId ? { ...c, columnId: targetCard.columnId, parentCardId: parentId } : c));
+        }
         const ref = doc(db, "rooms", roomId, "cards", activeId);
         await updateDoc(ref, {
           columnId: targetCard.columnId,
@@ -718,6 +774,7 @@ export function RetroBoard({
   return (
     <div className={cn(
       "flex flex-col gap-3 md:gap-4 lg:gap-8 h-full p-3 md:p-4 lg:p-6 xl:p-8 overflow-hidden select-none transition-all duration-500 relative",
+      isDraggingAny ? "cursor-grabbing" : "",
       timeLeft !== null && timeLeft <= 30 && timeLeft > 0 && room?.retroTimer?.status === "running"
         ? "ring-4 ring-rose-500/20 ring-inset dark:ring-rose-500/10 shadow-[inset_0_0_100px_rgba(244,63,94,0.15)] animate-pulse" 
         : ""
@@ -943,6 +1000,7 @@ export function RetroBoard({
                   renameColumn={renameColumn}
                   deleteColumn={deleteColumn}
                   cardsCount={colCards.length}
+                  isDraggingAny={isDraggingAny}
                 >
                   {colCards.map((card) => (
                     <RetroCard

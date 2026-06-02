@@ -79,6 +79,7 @@ export function RetroCard({
   // Drag & Drop configuration
   const { attributes, listeners, setNodeRef: setDraggableRef, transform, isDragging } = useDraggable({
     id: card.id,
+    disabled: isEditing || isOverlay
   });
   const { setNodeRef: setDroppableRef, isOver } = useDroppable({
     id: card.id,
@@ -244,8 +245,10 @@ export function RetroCard({
     <div 
       ref={setCombinedRef}
       style={dragStyle}
+      {...attributes}
+      {...listeners}
       className={cn(
-        "relative w-full",
+        "relative w-full cursor-default",
         isDragging || isOverlay ? "transition-none" : "transition-all duration-300",
         isTargetHighlight ? "scale-[1.02]" : ""
       )}
@@ -278,17 +281,6 @@ export function RetroCard({
           showAsPlaceholder ? "opacity-30 border-dashed border-indigo-500 bg-transparent dark:bg-transparent" : ""
         )}
       >
-      {/* Drag handle */}
-      {!isEditing && !isOverlay && (
-        <div 
-          {...attributes} 
-          {...listeners}
-          className="absolute top-4 right-4 p-1 rounded-lg text-zinc-400 dark:text-zinc-600 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/5 cursor-grab active:cursor-grabbing transition-colors opacity-40 group-hover:opacity-100"
-          title="Drag to reorder or drop on another card to merge"
-        >
-          <GripVertical className="h-4 w-4" />
-        </div>
-      )}
 
       {isEditing ? (
         <div className="flex flex-col gap-4">
@@ -461,7 +453,7 @@ export function RetroCard({
 
           {/* Action Items assignee and status controls */}
           {isActionItem && (
-            <div className="flex flex-wrap items-center gap-4 mt-2 p-3 rounded-xl bg-zinc-100/50 dark:bg-white/[0.02] border border-zinc-200/50 dark:border-zinc-800/50">
+            <div className="flex flex-wrap items-center gap-4 mt-2 p-3 rounded-xl bg-zinc-100/50 dark:bg-white/[0.02] border border-zinc-200/50 dark:border-zinc-800/50 no-drag">
               <div className="flex flex-col gap-1">
                 <span className="text-[9px] font-black uppercase tracking-wider text-zinc-400">Assignee</span>
                 <select
@@ -521,7 +513,7 @@ export function RetroCard({
             </div>
 
             {/* Row 2: Actions Row */}
-            <div className="flex items-center justify-between w-full gap-2">
+            <div className="flex items-center justify-between w-full gap-2 no-drag">
               {/* Left side: Comments button */}
               <button 
                 onClick={() => setShowComments(!showComments)}
@@ -587,7 +579,7 @@ export function RetroCard({
 
           {/* Comments panel */}
           {showComments && (
-            <div className="mt-4 border-t border-zinc-200 dark:border-white/5 pt-4 animate-in slide-in-from-bottom-2 duration-200">
+            <div className="mt-4 border-t border-zinc-200 dark:border-white/5 pt-4 animate-in slide-in-from-bottom-2 duration-200 no-drag">
               <span className="text-[10px] font-black uppercase tracking-wider text-zinc-400 block mb-3">Discussion Thread</span>
               
               {/* Comment list */}
