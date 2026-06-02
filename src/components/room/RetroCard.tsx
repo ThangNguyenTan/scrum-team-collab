@@ -190,35 +190,6 @@ export function RetroCard({
     });
   };
 
-  const handleAssigneeChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const val = e.target.value;
-    const ref = doc(db, "rooms", roomId, "cards", card.id);
-    if (!val) {
-      await updateDoc(ref, {
-        assigneeId: null,
-        assigneeName: null
-      });
-    } else {
-      const selectedUser = users.find(u => u.id === val);
-      await updateDoc(ref, {
-        assigneeId: selectedUser?.id || null,
-        assigneeName: selectedUser?.name || null
-      });
-    }
-  };
-
-  const cycleStatus = async () => {
-    const statuses: ('todo' | 'in_progress' | 'done')[] = ['todo', 'in_progress', 'done'];
-    const currentStatus = card.actionStatus || 'todo';
-    const nextIdx = (statuses.indexOf(currentStatus) + 1) % statuses.length;
-    const nextStatus = statuses[nextIdx];
-
-    const ref = doc(db, "rooms", roomId, "cards", card.id);
-    await updateDoc(ref, {
-      actionStatus: nextStatus
-    });
-  };
-
   const unmergeCard = async (childId: string) => {
     const confirmed = await confirmCustom("Separate Thought", "Are you sure you want to separate this thought from the stack?", "primary", "Separate");
     if (!confirmed) return;
@@ -451,56 +422,6 @@ export function RetroCard({
             </div>
           )}
 
-          {/* Action Items assignee and status controls */}
-          {isActionItem && (
-            <div className="flex flex-wrap items-center gap-4 mt-2 p-3 rounded-xl bg-zinc-100/50 dark:bg-white/[0.02] border border-zinc-200/50 dark:border-zinc-800/50 no-drag">
-              <div className="flex flex-col gap-1">
-                <span className="text-[9px] font-black uppercase tracking-wider text-zinc-400">Assignee</span>
-                <select
-                  value={card.assigneeId || ""}
-                  onChange={handleAssigneeChange}
-                  className="bg-transparent text-xs font-bold text-zinc-600 dark:text-zinc-300 focus:outline-none border-none cursor-pointer p-0 pr-6"
-                >
-                  <option value="" className="bg-white dark:bg-zinc-950">Unassigned</option>
-                  {users.map(u => (
-                    <option key={u.id} value={u.id} className="bg-white dark:bg-zinc-950">
-                      {u.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="flex flex-col gap-1">
-                <span className="text-[9px] font-black uppercase tracking-wider text-zinc-400">Status</span>
-                <button
-                  onClick={cycleStatus}
-                  className={cn(
-                    "flex items-center gap-1.5 px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition-colors",
-                    card.actionStatus === 'done' && "bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 hover:bg-emerald-500/20",
-                    card.actionStatus === 'in_progress' && "bg-sky-500/10 text-sky-500 border border-sky-500/20 hover:bg-sky-500/20",
-                    (!card.actionStatus || card.actionStatus === 'todo') && "bg-zinc-500/10 text-zinc-500 border border-zinc-500/20 hover:bg-zinc-500/20"
-                  )}
-                >
-                  {card.actionStatus === 'done' ? (
-                    <>
-                      <CheckCircle className="h-3 w-3" />
-                      Done
-                    </>
-                  ) : card.actionStatus === 'in_progress' ? (
-                    <>
-                      <Circle className="h-3 w-3 fill-sky-500/20 animate-pulse" />
-                      In Progress
-                    </>
-                  ) : (
-                    <>
-                      <Circle className="h-3 w-3" />
-                      Todo
-                    </>
-                  )}
-                </button>
-              </div>
-            </div>
-          )}
           <div className="flex flex-col gap-3 mt-2 pt-4 border-t border-zinc-200 dark:border-white/[0.03] w-full">
             {/* Row 1: Author Info */}
             <div className="flex items-center gap-2">

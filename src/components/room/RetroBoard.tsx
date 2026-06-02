@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import Image from "next/image";
 import { 
   doc, 
@@ -361,6 +361,9 @@ export function RetroBoard({
   const boardRef = useRef<HTMLDivElement>(null);
   const [activeCardId, setActiveCardId] = useState<string | null>(null);
   const [activeColumnIdDrag, setActiveColumnIdDrag] = useState<string | null>(null);
+
+  // Participant Filter State
+  const [selectedParticipantId, setSelectedParticipantId] = useState<string | null>(null);
 
   const isDraggingAny = activeCardId !== null || activeColumnIdDrag !== null;
 
@@ -765,8 +768,52 @@ export function RetroBoard({
 
   if (!room) return null;
 
+  const participants = useMemo(() => {
+    const list: { id: string; name: string; avatar?: string; cardCount: number }[] = [];
+    
+    // Helper to get card count for an author
+    const getCount = (authorId: string) => {
+      return cards.filter(c => c.authorId === authorId).length;
+    };
+
+    // Add current users first
+    users.forEach(u => {
+      list.push({
+        id: u.id,
+        name: u.name,
+        avatar: u.avatar,
+        cardCount: getCount(u.id)
+      });
+    });
+
+    // Add other authors from cards who are not currently online (not in users list)
+    cards.forEach(c => {
+      if (!list.some(p => p.id === c.authorId)) {
+        list.push({
+          id: c.authorId,
+          name: c.authorName || "Squad Member",
+          avatar: c.authorAvatar,
+          cardCount: getCount(c.authorId)
+        });
+      }
+    });
+
+    return list;
+  }, [users, cards]);
+
+  const filteredCards = useMemo(() => {
+    if (!selectedParticipantId) return cards;
+    return cards.filter(c => {
+      if (c.authorId === selectedParticipantId) return true;
+      if (!c.parentCardId) {
+        return cards.some(child => child.parentCardId === c.id && child.authorId === selectedParticipantId);
+      }
+      return false;
+    });
+  }, [cards, selectedParticipantId]);
+
   // Filter out cards that are grouped under another (parentCardId is set)
-  const mainCards = cards.filter(c => !c.parentCardId);
+  const mainCards = filteredCards.filter(c => !c.parentCardId);
 
   const totalDuration = room?.retroTimer?.duration ?? 300;
   const progressPercent = timeLeft !== null ? (timeLeft / totalDuration) * 100 : 0;
@@ -975,6 +1022,103 @@ export function RetroBoard({
         </div>
       </div>
 
+      {/* Participant Filter Bar */}
+      <div className="flex flex-col gap-2 bg-white/40 dark:bg-white/[0.01] border border-zinc-200 dark:border-white/5 p-3 rounded-2xl md:rounded-[1.5rem] shadow-sm shrink-0">
+        <div className="flex items-center justify-between px-2">
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-black uppercase tracking-[0.25em] text-zinc-400 dark:text-zinc-500">
+              Filter by Participant
+            </span>
+            {selectedParticipantId && (
+              <button 
+                onClick={() => setSelectedParticipantId(null)}
+                className="text-[10px] font-black uppercase text-indigo-500 hover:text-indigo-600 dark:text-indigo-400 transition-colors cursor-pointer"
+              >
+                • Clear Filter
+              </button>
+            )}
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 custom-scrollbar scrollbar-none">
+          {/* Everyone/All Filter Option */}
+          <button
+            onClick={() => setSelectedParticipantId(null)}
+            className={cn(
+              "flex items-center gap-2.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-all duration-300 border cursor-pointer shrink-0 active:scale-95 hover:scale-[1.02]",
+              !selectedParticipantId
+                ? "bg-gradient-to-r from-indigo-600 to-purple-600 border-transparent text-white shadow-lg shadow-indigo-500/20"
+                : "bg-white/80 dark:bg-zinc-900/50 border-zinc-200 dark:border-zinc-800/80 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-white/10 hover:text-zinc-950 dark:hover:text-white hover:border-zinc-300 dark:hover:border-zinc-700"
+            )}
+          >
+            <div className="relative flex items-center justify-center h-6 w-6 rounded-lg bg-indigo-500/10 text-xs shrink-0">
+              <span className="text-sm">👥</span>
+            </div>
+            
+            <span className="font-extrabold max-w-[120px] truncate">Everyone</span>
+            
+            <span className={cn(
+              "font-mono font-black text-[10px] px-1.5 py-0.5 rounded-md",
+              !selectedParticipantId ? "bg-white/20 text-white" : "bg-zinc-100 dark:bg-white/10 text-zinc-500 dark:text-zinc-400 group-hover:bg-zinc-200"
+            )}>
+              {cards.filter(c => !c.parentCardId).length}
+            </span>
+          </button>
+
+          {/* Participant Options */}
+          {participants.map((p) => {
+            const isSelected = selectedParticipantId === p.id;
+            const isOnline = users.some(u => u.id === p.id);
+            
+            return (
+              <button
+                key={p.id}
+                onClick={() => setSelectedParticipantId(p.id)}
+                className={cn(
+                  "flex items-center gap-2.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-all duration-300 border cursor-pointer shrink-0 active:scale-95 hover:scale-[1.02]",
+                  isSelected
+                    ? "bg-gradient-to-r from-indigo-600 to-purple-600 border-transparent text-white shadow-lg shadow-indigo-500/20"
+                    : "bg-white/80 dark:bg-zinc-900/50 border-zinc-200 dark:border-zinc-800/80 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-white/10 hover:text-zinc-950 dark:hover:text-white hover:border-zinc-300 dark:hover:border-zinc-700"
+                )}
+              >
+                {/* Avatar Container with Online Indicator */}
+                <div className="relative flex items-center justify-center h-6 w-6 rounded-lg bg-indigo-500/10 text-xs shrink-0">
+                  {p.avatar ? (
+                    <span className="text-sm">{p.avatar}</span>
+                  ) : (
+                    <span className="font-mono font-black text-indigo-400">
+                      {(p.name || "U").charAt(0).toUpperCase()}
+                    </span>
+                  )}
+                  
+                  {/* Online Indicator Dot */}
+                  {isOnline && (
+                    <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+                    </span>
+                  )}
+                </div>
+
+                <span className="font-extrabold max-w-[120px] truncate">{p.name}</span>
+
+                {/* Card Count Badge */}
+                {p.cardCount > 0 && (
+                  <span className={cn(
+                    "font-mono font-black text-[10px] px-1.5 py-0.5 rounded-md",
+                    isSelected 
+                      ? "bg-white/20 text-white" 
+                      : "bg-zinc-100 dark:bg-white/10 text-zinc-500 dark:text-zinc-400 group-hover:bg-zinc-200"
+                  )}>
+                    {p.cardCount}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
       {/* Retro Columns Drag & Drop Board */}
       <DndContext 
         sensors={sensors} 
@@ -1012,7 +1156,7 @@ export function RetroBoard({
                       displayName={displayName}
                       avatar={avatar}
                       users={users}
-                      mergedCards={cards.filter(c => c.parentCardId === card.id)}
+                      mergedCards={filteredCards.filter(c => c.parentCardId === card.id)}
                       isActionItem={isActionItemColumn}
                       onDeleteCard={deleteCard}
                       onToggleUpvote={toggleUpvote}
@@ -1155,7 +1299,7 @@ export function RetroBoard({
                     displayName={displayName}
                     avatar={avatar}
                     users={users}
-                    mergedCards={cards.filter(c => c.parentCardId === activeCardId)}
+                    mergedCards={filteredCards.filter(c => c.parentCardId === activeCardId)}
                     isActionItem={isActionItemColumn}
                     onDeleteCard={async () => {}}
                     onToggleUpvote={async () => {}}
@@ -1190,7 +1334,7 @@ export function RetroBoard({
                         displayName={displayName}
                         avatar={avatar}
                         users={users}
-                        mergedCards={cards.filter(c => c.parentCardId === card.id)}
+                        mergedCards={filteredCards.filter(c => c.parentCardId === card.id)}
                         isActionItem={isActionItemColumn}
                         onDeleteCard={async () => {}}
                         onToggleUpvote={async () => {}}
