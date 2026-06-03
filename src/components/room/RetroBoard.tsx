@@ -245,12 +245,13 @@ function ColumnDroppable({
   return (
     <div 
       ref={setNodeRef}
+      id={`column-container-${col.id}`}
       style={{ ...style, ...customStyles }}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       {...dragHandleProps}
       className={cn(
-        "flex flex-col w-full lg:min-w-[320px] xl:min-w-[400px] 2xl:min-w-[500px] lg:w-[320px] xl:w-[400px] 2xl:w-[500px] shrink-0 group/col rounded-[2rem] p-4 border backdrop-blur-md cursor-default",
+        "flex flex-col w-[calc(100vw-2.5rem)] sm:w-[360px] md:w-[380px] lg:w-[420px] xl:w-[450px] shrink-0 group/col rounded-[2rem] p-4 border backdrop-blur-md cursor-default snap-center",
         !theme.customHex && theme.bg,
         !theme.customHex && theme.border,
         !theme.customHex && theme.glow,
@@ -261,24 +262,17 @@ function ColumnDroppable({
       )}
     >
       <div className="flex items-center justify-between mb-4 lg:mb-6 px-2 lg:px-4">
-        <div className="flex items-center gap-2.5 lg:gap-3.5">
+        <div className="flex items-center gap-2.5 lg:gap-3.5 min-w-0 flex-1">
           <div 
             style={lineStyles} 
-            className={cn("w-1.5 h-6 rounded-full transition-all group-hover/col:scale-y-110", !theme.customHex && theme.line)}
+            className={cn("w-1.5 h-6 rounded-full transition-all group-hover/col:scale-y-110 shrink-0", !theme.customHex && theme.line)}
           ></div>
-          <h4 className={cn("text-base sm:text-lg lg:text-xl font-black tracking-tight", theme.titleColor)}>{col.title}</h4>
-          <span 
-            style={badgeStyles}
-            className={cn(
-              "text-[10px] sm:text-xs px-2.5 py-0.5 rounded-full border font-mono font-bold transition-all", 
-              !theme.customHex && theme.badge
-            )}
-          >
-            {cardsCount}
-          </span>
+          <h4 className={cn("text-base sm:text-lg lg:text-xl font-black tracking-tight truncate", theme.titleColor)} title={col.title}>
+            {col.title}
+          </h4>
         </div>
         {isAdmin && !isOverlay && (
-          <div className="flex items-center gap-1 opacity-0 group-hover/col:opacity-100 transition-opacity no-drag">
+          <div className="flex items-center gap-1 opacity-0 group-hover/col:opacity-100 transition-opacity no-drag shrink-0">
             <button onClick={() => renameColumn(col)} className="p-1.5 rounded-lg hover:bg-zinc-100 dark:hover:bg-white/5 hover:text-zinc-900 dark:hover:text-white text-zinc-400 dark:text-zinc-600 transition-all cursor-pointer"><Settings className="h-4 w-4" /></button>
             <button onClick={() => deleteColumn(col.id)} className="p-1.5 rounded-lg hover:bg-red-500/10 hover:text-red-500 text-zinc-400 dark:text-zinc-600 transition-all cursor-pointer"><X className="h-4 w-4" /></button>
           </div>
@@ -373,6 +367,8 @@ export function RetroBoard({
   const [customMin, setCustomMin] = useState("5");
   const [customSec, setCustomSec] = useState("0");
   const hasChimed = useRef(false);
+
+
 
   // Pointer constraint sensor so drag starts only after click and hold for 0.3 seconds (300ms)
   const sensors = useSensors(
@@ -1120,7 +1116,7 @@ export function RetroBoard({
       >
         <div 
           ref={boardRef}
-          className="flex-1 flex flex-col lg:flex-row lg:flex-wrap gap-4 lg:gap-6 xl:gap-8 overflow-y-auto overflow-x-hidden p-2 sm:p-4 md:p-6 pb-24 md:pb-24 custom-scrollbar animate-in fade-in duration-300"
+          className="flex-1 flex flex-row overflow-x-auto overflow-y-hidden gap-4 lg:gap-6 xl:gap-8 p-2 sm:p-4 md:p-6 pb-24 custom-scrollbar animate-in fade-in duration-300 snap-x snap-mandatory lg:snap-none items-stretch"
         >
           <SortableContext items={columns.map(c => `column-${c.id}`)} strategy={horizontalListSortingStrategy}>
             {columns.map((col) => {
