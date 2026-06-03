@@ -1068,7 +1068,6 @@ export function RetroBoard({
           {/* Participant Options */}
           {participants.map((p) => {
             const isSelected = selectedParticipantId === p.id;
-            const isOnline = users.some(u => u.id === p.id);
             
             return (
               <button
@@ -1081,21 +1080,13 @@ export function RetroBoard({
                     : "bg-white/80 dark:bg-zinc-900/50 border-zinc-200 dark:border-zinc-800/80 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-white/10 hover:text-zinc-950 dark:hover:text-white hover:border-zinc-300 dark:hover:border-zinc-700"
                 )}
               >
-                {/* Avatar Container with Online Indicator */}
+                {/* Avatar Container */}
                 <div className="relative flex items-center justify-center h-6 w-6 rounded-lg bg-indigo-500/10 text-xs shrink-0">
                   {p.avatar ? (
                     <span className="text-sm">{p.avatar}</span>
                   ) : (
                     <span className="font-mono font-black text-indigo-400">
                       {(p.name || "U").charAt(0).toUpperCase()}
-                    </span>
-                  )}
-                  
-                  {/* Online Indicator Dot */}
-                  {isOnline && (
-                    <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
                     </span>
                   )}
                 </div>
