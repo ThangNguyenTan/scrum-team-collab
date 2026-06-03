@@ -798,7 +798,7 @@ export function RetroBoard({
       }
     });
 
-    return list;
+    return [...list].sort((a, b) => a.name.localeCompare(b.name));
   }, [users, cards]);
 
   const filteredCards = useMemo(() => {
