@@ -5,8 +5,7 @@ import { Ticket, RoomUser } from "@/types";
 import { Plus, ListTodo, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { TICKET_STATUS_ORDER } from "@/constants";
-import { TicketCard } from "./TicketCard";
-import { TicketAddForm } from "./TicketAddForm";
+import { TicketCard, TicketAddForm } from "@/ui";
 
 interface TicketSidebarProps {
   roomId: string;

@@ -6,9 +6,7 @@ import { cn } from "@/lib/utils";
 import { RoomData, RoomUser, Ticket } from "@/types";
 import { FIBONACCI_SEQUENCE, DECKS, DeckType } from "@/constants";
 import { TicketSidebar } from "./TicketSidebar";
-import { PlanningCard } from "./PlanningCard";
-import { UserVoteCard } from "./UserVoteCard";
-import { SquadFilters } from "./SquadFilters";
+import { PlanningCard, UserVoteCard, SquadFilters } from "@/ui";
 
 interface PlanningBoardProps {
   room: RoomData;

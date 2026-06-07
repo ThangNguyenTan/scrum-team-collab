@@ -31,8 +31,7 @@ import jsPDF from "jspdf";
 import { toPng } from "html-to-image";
 import { RoomData, RoomUser, RetroColumn, RetroCard as RetroCardType } from "@/types";
 import { RetroCard } from "./RetroCard";
-import GifPicker from "./GifPicker";
-import { CustomDialog, useCustomDialog } from "./CustomDialog";
+import { GifPicker, CustomDialog, useCustomDialog } from "@/ui";
 import { playPing, playTada } from "@/lib/audioSynth";
 
 // DND kit imports
@@ -1191,7 +1190,7 @@ export function RetroBoard({
                       {activeGifSearch === 'new' && (
                         <div className="mt-2">
                           <GifPicker 
-                            onSelect={(url) => {
+                            onSelect={(url: string) => {
                               setNewCardImage(url);
                               setActiveGifSearch(null);
                             }} 

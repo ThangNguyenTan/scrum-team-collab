@@ -26,19 +26,25 @@ import { copyToClipboard } from "@/lib/utils";
 import { RoomData, RoomUser, RetroColumn, RetroCard } from "@/types";
 import { EMOJIS } from "@/constants";
 import { playTada, playSuccess, playFail, playPing } from "@/lib/audioSynth";
-import { ReactionOverlay } from "@/components/room/ReactionOverlay";
-import { ReactionsPanel } from "@/components/room/ReactionsPanel";
-import { ExportModal } from "@/components/room/ExportModal";
 import { generateMeetingSummary } from "@/lib/exportUtils";
 import { Ticket } from "@/types";
+import { RoomLayout } from "@/layouts";
 
 // Extracted Components
-import { PlanningBoard } from "@/components/room/PlanningBoard";
-import { RetroBoard } from "@/components/room/RetroBoard";
-import { UserSidebar } from "@/components/room/UserSidebar";
-import { JoinRoomModal } from "@/components/room/JoinRoomModal";
-import { RoomHeader } from "@/components/room/RoomHeader";
-import { CustomDialog, useCustomDialog } from "@/components/room/CustomDialog";
+import { 
+  PlanningBoard, 
+  RetroBoard, 
+  UserSidebar, 
+  RoomHeader 
+} from "@/features";
+import { 
+  JoinRoomModal, 
+  CustomDialog, 
+  useCustomDialog, 
+  ReactionOverlay, 
+  ReactionsPanel, 
+  ExportModal 
+} from "@/ui";
 
 export default function RoomPage() {
   const { id: roomId } = useParams() as { id: string };
@@ -402,27 +408,24 @@ export default function RoomPage() {
   }
 
   return (
-    <div className="flex flex-col h-screen bg-background text-foreground overflow-hidden relative" suppressHydrationWarning>
-      <div className="fixed inset-0 -z-10 bg-[radial-gradient(circle_at_50%_0%,rgba(67,56,202,0.08),transparent_50%)] pointer-events-none"></div>
-      
-      {/* Floating live reaction overlay */}
-      <ReactionOverlay roomId={roomId} />
-      
-      <RoomHeader 
-        roomId={roomId}
-        activeTab={activeTab}
-        handleTabSwitch={handleTabSwitch}
-        users={users}
-        copyToClipboard={copyToClipboard}
-        idCopyFeedback={idCopyFeedback}
-        setIdCopyFeedback={setIdCopyFeedback}
-        inviteFeedback={inviteFeedback}
-        setInviteFeedback={setInviteFeedback}
-        onLogoClick={() => router.push("/")}
-        onExportClick={handleExport}
-      />
-
-      <div className="flex flex-1 overflow-hidden">
+    <RoomLayout
+      reactionOverlaySlot={<ReactionOverlay roomId={roomId} />}
+      headerSlot={
+        <RoomHeader 
+          roomId={roomId}
+          activeTab={activeTab}
+          handleTabSwitch={handleTabSwitch}
+          users={users}
+          copyToClipboard={copyToClipboard}
+          idCopyFeedback={idCopyFeedback}
+          setIdCopyFeedback={setIdCopyFeedback}
+          inviteFeedback={inviteFeedback}
+          setInviteFeedback={setInviteFeedback}
+          onLogoClick={() => router.push("/")}
+          onExportClick={handleExport}
+        />
+      }
+      sidebarSlot={
         <UserSidebar 
           sortedUsers={sortedUsers} 
           room={room} 
@@ -432,64 +435,65 @@ export default function RoomPage() {
           onKickUser={handleKickUser}
           onTransferHost={handleTransferHost}
         />
-
-        <main className="flex-1 bg-zinc-50/50 dark:bg-black/40 overflow-hidden relative">
-          {activeTab === "planning" ? (
-             <PlanningBoard 
-               room={room as RoomData} 
-               roomId={roomId} 
-               users={users} 
-               isAdmin={isAdmin} 
-               currentUserId={user?.uid || ""} 
-             />
-          ) : (
-            <RetroBoard 
-              room={room}
-              roomId={roomId}
-              users={users}
-              columns={columns}
-              setColumns={setColumns}
-              cards={cards}
-              setCards={setCards}
-              isAdmin={isAdmin}
-              currentUserId={user?.uid || ""}
-              displayName={displayName}
-              avatar={avatar}
-            />
-          )}
-        </main>
-      </div>
-
-      {showJoinModal && (
-        <JoinRoomModal 
-          avatar={avatar}
-          defaultName={displayName}
-          defaultGroup={userGroup}
-          buttonText={userHasJoined ? "Update Profile" : "Join Room"}
-          setAvatar={setAvatar}
-          showEmojiPicker={showEmojiPicker}
-          setShowEmojiPicker={setShowEmojiPicker}
-          handleJoin={handleJoin}
-          onClose={userHasJoined ? () => setShowJoinModal(false) : undefined}
-        />
-      )}
-
-      {/* Floating control dock for reactions & sounds */}
-      {user && (
-        <ReactionsPanel 
-          roomId={roomId} 
-          senderId={user.uid} 
-          senderName={displayName} 
-        />
-      )}
-
-      {showExportModal && (
-        <ExportModal 
-          markdown={exportMarkdown} 
-          onClose={() => setShowExportModal(false)} 
-        />
-      )}
-      <CustomDialog {...dialogProps} />
-    </div>
+      }
+      contentSlot={
+        activeTab === "planning" ? (
+          <PlanningBoard 
+            room={room as RoomData} 
+            roomId={roomId} 
+            users={users} 
+            isAdmin={isAdmin} 
+            currentUserId={user?.uid || ""} 
+          />
+        ) : (
+          <RetroBoard 
+            room={room}
+            roomId={roomId}
+            users={users}
+            columns={columns}
+            setColumns={setColumns}
+            cards={cards}
+            setCards={setCards}
+            isAdmin={isAdmin}
+            currentUserId={user?.uid || ""}
+            displayName={displayName}
+            avatar={avatar}
+          />
+        )
+      }
+      joinModalSlot={
+        showJoinModal && (
+          <JoinRoomModal 
+            avatar={avatar}
+            defaultName={displayName}
+            defaultGroup={userGroup}
+            buttonText={userHasJoined ? "Update Profile" : "Join Room"}
+            setAvatar={setAvatar}
+            showEmojiPicker={showEmojiPicker}
+            setShowEmojiPicker={setShowEmojiPicker}
+            handleJoin={handleJoin}
+            onClose={userHasJoined ? () => setShowJoinModal(false) : undefined}
+          />
+        )
+      }
+      reactionsPanelSlot={
+        user && (
+          <ReactionsPanel 
+            roomId={roomId} 
+            senderId={user.uid} 
+            senderName={displayName} 
+          />
+        )
+      }
+      exportModalSlot={
+        showExportModal && (
+          <ExportModal 
+            markdown={exportMarkdown} 
+            onClose={() => setShowExportModal(false)} 
+          />
+        )
+      }
+      dialogSlot={<CustomDialog {...dialogProps} />}
+    />
   );
 }

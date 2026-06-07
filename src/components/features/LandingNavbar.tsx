@@ -1,5 +1,5 @@
 import { Zap } from "lucide-react";
-import { ThemeToggle } from "@/components/ThemeToggle";
+import { ThemeToggle } from "@/ui";
 
 export function LandingNavbar() {
   return (

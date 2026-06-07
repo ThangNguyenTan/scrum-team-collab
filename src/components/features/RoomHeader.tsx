@@ -1,8 +1,8 @@
 import { Zap, Copy, CheckCircle2, Share2, FileText } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { RoomUser } from "@/types";
-import { ThemeToggle } from "@/components/ThemeToggle";
-import { FocusMusicPlayer } from "@/components/room/FocusMusicPlayer";
+import { ThemeToggle } from "@/ui";
+import { FocusMusicPlayer } from "./FocusMusicPlayer";
 
 interface RoomHeaderProps {
   roomId: string;

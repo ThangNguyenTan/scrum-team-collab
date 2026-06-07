@@ -17,11 +17,10 @@ import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { RetroCard as RetroCardType, RoomUser } from "@/types";
 import { useState, useEffect } from "react";
-import GifPicker from "./GifPicker";
+import { GifPicker, CustomDialog, useCustomDialog } from "@/ui";
 import { useDraggable, useDroppable } from "@dnd-kit/core";
 import { doc, updateDoc, arrayUnion, arrayRemove } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { CustomDialog, useCustomDialog } from "./CustomDialog";
 
 
 
@@ -340,7 +339,7 @@ export function RetroCard({
           {showGifPicker && (
             <div className="mt-4">
               <GifPicker 
-                onSelect={(url) => {
+                onSelect={(url: string) => {
                   setEditImage(url);
                   setShowGifPicker(false);
                 }} 
