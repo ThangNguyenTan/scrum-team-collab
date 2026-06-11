@@ -3,26 +3,22 @@ import {
   Edit2, 
   Trash2, 
   X, 
-  UploadCloud, 
   GripVertical, 
   MessageSquare, 
   ChevronDown, 
   ChevronUp, 
   CheckCircle, 
   Circle,
-  Undo,
-  Check
+  Undo
 } from "lucide-react";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { RetroCard as RetroCardType, RoomUser } from "@/types";
-import { useState, useEffect } from "react";
-import { GifPicker, CustomDialog, useCustomDialog } from "@/ui";
+import { useState } from "react";
+import { CustomDialog, useCustomDialog } from "@/ui";
 import { useDraggable, useDroppable } from "@dnd-kit/core";
 import { doc, updateDoc, arrayUnion, arrayRemove } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-
-
 
 interface RetroCardProps {
   card: RetroCardType;
@@ -36,6 +32,7 @@ interface RetroCardProps {
   isActionItem: boolean;
   onDeleteCard: (cardId: string) => Promise<void>;
   onToggleUpvote: (card: RetroCardType) => Promise<void>;
+  onEditCard?: (card: RetroCardType) => void;
   isOverlay?: boolean;
 }
 
@@ -51,14 +48,10 @@ export function RetroCard({
   isActionItem,
   onDeleteCard,
   onToggleUpvote,
+  onEditCard,
   isOverlay = false
 }: RetroCardProps) {
   const { alertCustom, confirmCustom, dialogProps } = useCustomDialog();
-  // Editing State
-  const [isEditing, setIsEditing] = useState(false);
-  const [editText, setEditText] = useState(card.text);
-  const [editImage, setEditImage] = useState(card.imageUrl || "");
-  const [showGifPicker, setShowGifPicker] = useState(false);
 
   // Accordion Stack State
   const [stackExpanded, setStackExpanded] = useState(false);
@@ -67,18 +60,10 @@ export function RetroCard({
   const [showComments, setShowComments] = useState(false);
   const [newComment, setNewComment] = useState("");
 
-  // Sync edits when card prop changes (but only if not actively editing)
-  useEffect(() => {
-    if (!isEditing) {
-      setEditText(card.text);
-      setEditImage(card.imageUrl || "");
-    }
-  }, [card, isEditing]);
-
   // Drag & Drop configuration
   const { attributes, listeners, setNodeRef: setDraggableRef, transform, isDragging } = useDraggable({
     id: card.id,
-    disabled: isEditing || isOverlay
+    disabled: isOverlay
   });
   const { setNodeRef: setDroppableRef, isOver } = useDroppable({
     id: card.id,
@@ -96,59 +81,6 @@ export function RetroCard({
   const dragStyle = transform && !isDragging && !isOverlay ? {
     transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
   } : undefined;
-
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    if (file.size > 5 * 1024 * 1024) {
-      await alertCustom("File Too Large", "Image size must be below 5MB to ensure fast loading times.");
-      return;
-    }
-
-    const reader = new FileReader();
-    if (file.type === "image/gif") {
-      reader.onload = (ev) => setEditImage(ev.target?.result as string);
-      reader.readAsDataURL(file);
-      return;
-    }
-
-    reader.onload = (ev) => {
-      const img = new window.Image();
-      img.onload = () => {
-        const canvas = document.createElement("canvas");
-        const MAX_WIDTH = 600;
-        let scaleSize = 1;
-        if (img.width > MAX_WIDTH) {
-          scaleSize = MAX_WIDTH / img.width;
-        }
-        canvas.width = img.width * scaleSize;
-        canvas.height = img.height * scaleSize;
-        const ctx = canvas.getContext("2d");
-        ctx?.drawImage(img, 0, 0, canvas.width, canvas.height);
-        const dataUrl = canvas.toDataURL("image/jpeg", 0.7);
-        setEditImage(dataUrl);
-      };
-      if (typeof ev.target?.result === "string") {
-        img.src = ev.target.result;
-      }
-    };
-    reader.readAsDataURL(file);
-  };
-
-  const handleUpdate = async () => {
-    if (!editText.trim() && !editImage.trim()) return;
-
-    const ref = doc(db, "rooms", roomId, "cards", card.id);
-    await updateDoc(ref, {
-      text: editText.trim(),
-      imageUrl: editImage || null,
-      color: 'default'
-    });
-
-    setIsEditing(false);
-    setShowGifPicker(false);
-  };
 
   const handleAddComment = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -252,104 +184,6 @@ export function RetroCard({
         )}
       >
 
-      {isEditing ? (
-        <div className="flex flex-col gap-4">
-          <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 z-20"></div>
-          
-          {editImage && (
-            <div className="relative w-full min-h-[300px] rounded-xl overflow-hidden bg-black/40 border border-indigo-500/20 mb-2">
-              <Image 
-                src={editImage} 
-                alt="Preview" 
-                fill
-                unoptimized
-                className="object-contain opacity-90" 
-              />
-              <button 
-                onClick={() => setEditImage("")}
-                className="absolute top-2 right-2 bg-black/60 p-1.5 rounded-full text-white hover:bg-black transition-colors"
-                title="Remove image"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-          )}
-
-          <div className="relative rounded-2xl border border-zinc-200/80 dark:border-zinc-800 bg-zinc-50/30 dark:bg-zinc-950/40 p-4 focus-within:border-indigo-500/50 focus-within:ring-2 focus-within:ring-indigo-500/10 focus-within:bg-white dark:focus-within:bg-zinc-950/60 transition-all duration-300">
-            <textarea 
-              autoFocus
-              className="w-full bg-transparent border-none text-zinc-900 dark:text-white text-sm md:text-base focus:outline-none resize-none min-h-[140px] custom-scrollbar font-medium placeholder-zinc-400 dark:placeholder-zinc-600"
-              value={editText}
-              onChange={(e) => setEditText(e.target.value)}
-              placeholder="Edit your thought..."
-            />
-          </div>
-
-          <div className="flex items-center justify-between gap-3 mt-2 pt-4 border-t border-zinc-200 dark:border-zinc-800 w-full overflow-x-auto scrollbar-none py-1">
-            <div className="flex items-center gap-2 shrink-0">
-              <label 
-                title="Change Image"
-                className="h-10 px-4 rounded-xl transition-all flex items-center justify-center gap-2 bg-zinc-100 dark:bg-white/5 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-200 dark:hover:bg-white/10 hover:border-zinc-300 dark:hover:border-zinc-700 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 cursor-pointer active:scale-95 border border-zinc-200/50 dark:border-white/5 text-[11px] font-black uppercase tracking-wider whitespace-nowrap shrink-0"
-              >
-                <UploadCloud className="h-4 w-4" />
-                <span className="text-[11px] font-black uppercase tracking-wider">Image</span>
-                <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
-              </label>
-              <button 
-                title="Change GIF"
-                onClick={() => setShowGifPicker(!showGifPicker)}
-                className={cn(
-                  "h-10 px-4 rounded-xl transition-all flex items-center justify-center border border-zinc-200/50 dark:border-white/5 active:scale-95 text-[11px] font-black uppercase tracking-wider cursor-pointer whitespace-nowrap shrink-0",
-                  showGifPicker 
-                    ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/20 border-transparent" 
-                    : "bg-zinc-100 dark:bg-white/5 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-200 dark:hover:bg-white/10 hover:border-zinc-300 dark:hover:border-zinc-700 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-500/10"
-                )}
-              >
-                <span className="text-[11px] font-black uppercase tracking-wider">GIF</span>
-              </button>
-            </div>
-
-            <div className="flex items-center gap-2 shrink-0">
-              <button 
-                onClick={() => {
-                  setIsEditing(false);
-                  setShowGifPicker(false);
-                  setEditText(card.text);
-                  setEditImage(card.imageUrl || "");
-                }} 
-                title="Cancel"
-                aria-label="Cancel"
-                className="w-10 h-10 flex items-center justify-center text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition-all cursor-pointer hover:bg-zinc-100 dark:hover:bg-white/5 rounded-xl active:scale-95 whitespace-nowrap shrink-0"
-              >
-                <X className="h-5 w-5" />
-                <span className="sr-only">Cancel</span>
-              </button>
-              <button 
-                onClick={handleUpdate} 
-                title="Sync Edit"
-                aria-label="Sync Edit"
-                className="bg-indigo-600 hover:bg-indigo-500 text-white w-10 h-10 rounded-xl active:scale-95 shadow-lg shadow-indigo-500/20 transition-all cursor-pointer flex items-center justify-center whitespace-nowrap shrink-0"
-              >
-                <Check className="h-5 w-5" />
-                <span className="sr-only">Sync Edit</span>
-              </button>
-            </div>
-          </div>
-
-          {showGifPicker && (
-            <div className="mt-4">
-              <GifPicker 
-                onSelect={(url: string) => {
-                  setEditImage(url);
-                  setShowGifPicker(false);
-                }} 
-                onClose={() => setShowGifPicker(false)} 
-              />
-            </div>
-          )}
-        </div>
-      ) : (
-        <>
           {card.imageUrl && (
             <div className="w-full relative min-h-[250px] rounded-2xl overflow-hidden bg-black/5 dark:bg-black/40 border border-zinc-200 dark:border-white/5 group-hover:border-zinc-300 dark:group-hover:border-white/10 transition-all duration-500 mb-1">
               <Image 
@@ -454,11 +288,7 @@ export function RetroCard({
                 {(isAdmin || card.authorId === currentUserId) && (
                   <div className="flex items-center opacity-0 group-hover:opacity-100 transition-all mr-1 gap-1">
                     <button 
-                      onClick={() => {
-                        setIsEditing(true);
-                        setEditText(card.text);
-                        setEditImage(card.imageUrl || "");
-                      }} 
+                      onClick={() => onEditCard?.(card)} 
                       title="Edit Insight"
                       aria-label="Edit Insight"
                       className="p-2 text-zinc-400 dark:text-zinc-600 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 hover:scale-110 rounded-lg active:scale-90 transition-all duration-200"
@@ -554,8 +384,6 @@ export function RetroCard({
               </form>
             </div>
           )}
-        </>
-      )}
       </div>
       <CustomDialog {...dialogProps} />
     </div>

@@ -31,7 +31,7 @@ export default function GifPicker({ onSelect, onClose }: GifPickerProps) {
 
       const res = await fetch(endpoint);
       const data = await res.json();
-      
+
       if (data.meta && data.meta.status !== 200) {
         setError(data.meta.msg || "API Error from Klipy");
         setGifs([]);
@@ -89,16 +89,16 @@ export default function GifPicker({ onSelect, onClose }: GifPickerProps) {
         />
       </div>
 
-      <div className="grid grid-cols-1 gap-4 max-h-[400px] overflow-y-auto custom-scrollbar p-1">
+      <div className="grid grid-cols-2 gap-3 max-h-[400px] overflow-y-auto custom-scrollbar p-1">
         {Array.isArray(gifs) && gifs.map((gif) => {
           // Klipy URL structure: file -> md/sm/hd -> gif -> url
           const gifUrl = gif.file?.md?.gif?.url || gif.file?.sm?.gif?.url || gif.src;
-          
+
           return (
             <button
               key={gif.id}
               onClick={() => onSelect(gifUrl)}
-              className="relative min-h-[180px] rounded-xl overflow-hidden bg-zinc-100 dark:bg-white/5 border-2 border-transparent hover:border-indigo-500 transition-all hover:scale-[1.01] active:scale-[0.98] group shadow-sm dark:shadow-xl z-0 hover:z-10"
+              className="relative min-h-[144px] sm:min-h-[190px] rounded-xl overflow-hidden bg-zinc-100 dark:bg-white/5 border-2 border-transparent hover:border-indigo-500 transition-all hover:scale-[1.02] active:scale-[0.98] group shadow-sm dark:shadow-xl z-0 hover:z-10"
             >
               <Image
                 src={gifUrl}
@@ -108,7 +108,7 @@ export default function GifPicker({ onSelect, onClose }: GifPickerProps) {
                 className="object-cover transition-opacity group-hover:opacity-90"
               />
               <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                 <div className="text-xs font-bold text-white bg-indigo-500 px-2 py-1 rounded shadow-lg uppercase tracking-tighter">Select</div>
+                <div className="text-xs font-bold text-white bg-indigo-500 px-2 py-1 rounded shadow-lg uppercase tracking-tighter">Select</div>
               </div>
             </button>
           );

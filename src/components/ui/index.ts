@@ -13,3 +13,5 @@ export { default as GifPicker } from "./GifPicker";
 export * from "./ReactionsPanel";
 export * from "./ReactionOverlay";
 export * from "./RetroTemplateModal";
+export * from "./RetroInsightModal";
+

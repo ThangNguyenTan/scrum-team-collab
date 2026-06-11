@@ -1,11 +1,11 @@
 import { useState, useRef, useEffect, useMemo } from "react";
 import Image from "next/image";
-import { 
-  doc, 
-  updateDoc, 
-  addDoc, 
-  deleteDoc, 
-  collection, 
+import {
+  doc,
+  updateDoc,
+  addDoc,
+  deleteDoc,
+  collection,
   serverTimestamp,
   arrayUnion,
   arrayRemove,
@@ -13,10 +13,10 @@ import {
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import {
-  Plus, 
-  Download, 
-  Settings, 
-  X, 
+  Plus,
+  Download,
+  Settings,
+  X,
   FileDown,
   UploadCloud,
   Timer,
@@ -33,18 +33,18 @@ import jsPDF from "jspdf";
 import { toPng } from "html-to-image";
 import { RoomData, RoomUser, RetroColumn, RetroCard as RetroCardType } from "@/types";
 import { RetroCard } from "./RetroCard";
-import { GifPicker, CustomDialog, useCustomDialog, RetroTemplateModal } from "@/ui";
+import { GifPicker, CustomDialog, useCustomDialog, RetroInsightModal, RetroTemplateModal } from "@/ui";
 import { playPing, playTada } from "@/lib/audioSynth";
 import { RETRO_TEMPLATES } from "@/constants";
 
 
 // DND kit imports
-import { 
-  DndContext, 
-  PointerSensor, 
-  useSensor, 
-  useSensors, 
-  DragEndEvent, 
+import {
+  DndContext,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
   useDroppable,
   DragOverlay,
   closestCenter
@@ -87,7 +87,7 @@ const presetHexes: Record<string, string> = {
 const getColumnColorTheme = (title: string, color?: string) => {
   // If color is a preset name, resolve its hex
   const activeColor = color && presetHexes[color] ? presetHexes[color] : color;
-  
+
   if (activeColor && activeColor.startsWith("#")) {
     return {
       bg: "", // applied dynamically as style
@@ -202,12 +202,12 @@ class SmartPointerSensor extends PointerSensor {
   ];
 }
 
-function ColumnDroppable({ 
-  col, 
-  children, 
-  isAdmin, 
-  renameColumn, 
-  deleteColumn, 
+function ColumnDroppable({
+  col,
+  children,
+  isAdmin,
+  renameColumn,
+  deleteColumn,
   cardsCount,
   isOverlay = false,
   dragHandleProps = {},
@@ -223,15 +223,15 @@ function ColumnDroppable({
   // Dynamic style calculation for custom colors
   const customStyles = theme.customHex ? {
     backgroundColor: hexToRgba(theme.customHex, 0.015),
-    borderColor: isOver 
-      ? hexToRgba(theme.customHex, 0.5) 
-      : isHovered 
-        ? hexToRgba(theme.customHex, 0.25) 
+    borderColor: isOver
+      ? hexToRgba(theme.customHex, 0.5)
+      : isHovered
+        ? hexToRgba(theme.customHex, 0.25)
         : hexToRgba(theme.customHex, 0.1),
     boxShadow: isOver
       ? `0 0 45px -5px ${hexToRgba(theme.customHex, 0.15)}, inset 0 0 20px ${hexToRgba(theme.customHex, 0.05)}`
-      : isHovered 
-        ? `0 0 40px -5px ${hexToRgba(theme.customHex, 0.15)}` 
+      : isHovered
+        ? `0 0 40px -5px ${hexToRgba(theme.customHex, 0.15)}`
         : `0 0 40px -20px ${hexToRgba(theme.customHex, 0.05)}`
   } : {};
 
@@ -246,7 +246,7 @@ function ColumnDroppable({
   } : {};
 
   return (
-    <div 
+    <div
       ref={setNodeRef}
       id={`column-container-${col.id}`}
       style={{ ...style, ...customStyles }}
@@ -266,8 +266,8 @@ function ColumnDroppable({
     >
       <div className="flex items-center justify-between mb-4 lg:mb-6 px-2 lg:px-4">
         <div className="flex items-center gap-2.5 lg:gap-3.5 min-w-0 flex-1">
-          <div 
-            style={lineStyles} 
+          <div
+            style={lineStyles}
             className={cn("w-1.5 h-6 rounded-full transition-all group-hover/col:scale-y-110 shrink-0", !theme.customHex && theme.line)}
           ></div>
           <h4 className={cn("text-base sm:text-lg lg:text-xl font-black tracking-tight truncate", theme.titleColor)} title={col.title}>
@@ -335,18 +335,18 @@ function SortableColumnWrapper({
   );
 }
 
-export function RetroBoard({ 
-  room, 
-  roomId, 
-  users, 
-  columns, 
+export function RetroBoard({
+  room,
+  roomId,
+  users,
+  columns,
   setColumns,
-  cards, 
+  cards,
   setCards,
-  isAdmin, 
-  currentUserId, 
-  displayName, 
-  avatar 
+  isAdmin,
+  currentUserId,
+  displayName,
+  avatar
 }: RetroBoardProps) {
   const { alertCustom, confirmCustom, promptCustom, dialogProps } = useCustomDialog();
   // Template presets states
@@ -361,6 +361,10 @@ export function RetroBoard({
   const [newCardImage, setNewCardImage] = useState("");
   const [activeGifSearch, setActiveGifSearch] = useState<string | null>(null);
   const [activeColumnId, setActiveColumnId] = useState<string | null>(null);
+  // Retro Insight Modal State
+  const [activeInsightColId, setActiveInsightColId] = useState<string | null>(null);
+  const [activeInsightCard, setActiveInsightCard] = useState<RetroCardType | null>(null);
+  const [isInsightModalOpen, setIsInsightModalOpen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const boardRef = useRef<HTMLDivElement>(null);
   const [activeCardId, setActiveCardId] = useState<string | null>(null);
@@ -423,65 +427,15 @@ export function RetroBoard({
     return () => clearInterval(interval);
   }, [room?.retroTimer]);
 
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    if (file.size > 5 * 1024 * 1024) {
-      await alertCustom("File Too Large", "Image size must be below 5MB to ensure fast loading times for all team members.");
-      return;
-    }
-
-    const reader = new FileReader();
-    
-    if (file.type === "image/gif") {
-      reader.onload = (ev) => setNewCardImage(ev.target?.result as string);
-      reader.readAsDataURL(file);
-      return;
-    }
-
-    reader.onload = (ev) => {
-      const img = new window.Image();
-      img.onload = () => {
-        const canvas = document.createElement("canvas");
-        const MAX_WIDTH = 600;
-        let scaleSize = 1;
-        if (img.width > MAX_WIDTH) {
-          scaleSize = MAX_WIDTH / img.width;
-        }
-        canvas.width = img.width * scaleSize;
-        canvas.height = img.height * scaleSize;
-        const ctx = canvas.getContext("2d");
-        ctx?.drawImage(img, 0, 0, canvas.width, canvas.height);
-        const dataUrl = canvas.toDataURL("image/jpeg", 0.7);
-        setNewCardImage(dataUrl);
-      };
-      if (typeof ev.target?.result === "string") {
-        img.src = ev.target.result;
-      }
-    };
-    reader.readAsDataURL(file);
-  };
-
-  const addCard = async (colId: string) => {
-    if (!newCardText.trim() && !newCardImage.trim()) return;
-    
+  const addCard = async (colId: string, text: string, imageUrl: string | null) => {
     const currentUserData = users.find((u) => u.id === currentUserId);
     const finalName = currentUserData?.name || displayName || (isAdmin ? room?.creatorName : "") || "Team Member";
     const finalAvatar = currentUserData?.avatar || avatar || "";
 
-    const textToSave = newCardText.trim();
-    const imageToSave = newCardImage.trim() || null;
-
-    setNewCardText("");
-    setNewCardImage("");
-    setActiveGifSearch(null);
-    setActiveColumnId(null);
-
     await addDoc(collection(db, "rooms", roomId, "cards"), {
       columnId: colId,
-      text: textToSave,
-      imageUrl: imageToSave,
+      text: text.trim(),
+      imageUrl: imageUrl || null,
       upvotes: [],
       authorName: finalName,
       authorId: currentUserId,
@@ -497,9 +451,29 @@ export function RetroBoard({
     });
   };
 
+  const updateCard = async (cardId: string, text: string, imageUrl: string | null) => {
+    const ref = doc(db, "rooms", roomId, "cards", cardId);
+    await updateDoc(ref, {
+      text: text.trim(),
+      imageUrl: imageUrl || null,
+      color: 'default'
+    });
+  };
+
+  const handleSaveInsight = async (text: string, imageUrl: string | null) => {
+    if (activeInsightCard) {
+      await updateCard(activeInsightCard.id, text, imageUrl);
+    } else if (activeInsightColId) {
+      await addCard(activeInsightColId, text, imageUrl);
+    }
+    setIsInsightModalOpen(false);
+    setActiveInsightColId(null);
+    setActiveInsightCard(null);
+  };
+
   const toggleUpvote = async (card: RetroCardType) => {
     if (card.authorId === currentUserId) return;
-    
+
     const ref = doc(db, "rooms", roomId, "cards", card.id);
     if (card.upvotes.includes(currentUserId)) {
       await updateDoc(ref, { upvotes: arrayRemove(currentUserId) });
@@ -564,10 +538,10 @@ export function RetroBoard({
   const addColumn = async () => {
     if (!isAdmin) return;
     const res = await promptCustom(
-      "Add Retro Column", 
-      "Enter the name and choose a color for your new retro column:", 
-      "", 
-      "Column Title (e.g., Ideas, Risks)", 
+      "Add Retro Column",
+      "Enter the name and choose a color for your new retro column:",
+      "",
+      "Column Title (e.g., Ideas, Risks)",
       "Create",
       "Cancel",
       true,
@@ -584,7 +558,7 @@ export function RetroBoard({
 
   const renameColumn = async (col: RetroColumn) => {
     if (!isAdmin) return;
-    
+
     // Resolve implicit color if col.color is not set
     let activeColor = col.color;
     if (!activeColor) {
@@ -601,10 +575,10 @@ export function RetroBoard({
     }
 
     const res = await promptCustom(
-      "Edit Column", 
-      "Enter the title and choose a color for this retro column:", 
-      col.title, 
-      "Column Title", 
+      "Edit Column",
+      "Enter the title and choose a color for this retro column:",
+      col.title,
+      "Column Title",
       "Save",
       "Cancel",
       true,
@@ -612,7 +586,7 @@ export function RetroBoard({
     );
     if (!res) return;
     const { title, color } = res;
-    await updateDoc(doc(db, "rooms", roomId, "columns", col.id), { 
+    await updateDoc(doc(db, "rooms", roomId, "columns", col.id), {
       title,
       color
     });
@@ -639,7 +613,7 @@ export function RetroBoard({
 
   const pauseTimer = async () => {
     if (!isAdmin || !room?.retroTimer || room.retroTimer.status !== "running") return;
-    
+
     const startedAt = room.retroTimer.startedAt?.toMillis() || Date.now();
     const elapsed = Math.floor((Date.now() - startedAt) / 1000);
     const calculatedLeft = Math.max(0, room.retroTimer.duration - elapsed);
@@ -652,7 +626,7 @@ export function RetroBoard({
 
   const resumeTimer = async () => {
     if (!isAdmin || !room?.retroTimer || room.retroTimer.status !== "paused") return;
-    
+
     await updateDoc(doc(db, "rooms", roomId), {
       "retroTimer.status": "running",
       "retroTimer.duration": room.retroTimer.pausedTimeLeft || 0,
@@ -676,7 +650,7 @@ export function RetroBoard({
     const secs = parseInt(customSec) || 0;
     const totalSeconds = (mins * 60) + secs;
     if (totalSeconds <= 0) return;
-    
+
     startTimer(totalSeconds);
     setShowCustomTimer(false);
   };
@@ -762,7 +736,7 @@ export function RetroBoard({
       if (targetCard) {
         // Prevent stacking a card under a child card (only parent level stacking)
         const parentId = targetCard.parentCardId || targetCard.id;
-        
+
         if (setCards) {
           setCards(prev => prev.map(c => c.id === activeId ? { ...c, columnId: targetCard.columnId, parentCardId: parentId } : c));
         }
@@ -788,7 +762,7 @@ export function RetroBoard({
         rows.push([col.title, card.text, card.upvotes.length.toString(), card.authorName]);
       });
     });
-    
+
     const csvContent = "data:text/csv;charset=utf-8," + rows.map(e => e.join(",")).join("\n");
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
@@ -808,7 +782,7 @@ export function RetroBoard({
         pixelRatio: 2,
         skipFonts: true,
       });
-      
+
       const pdf = new jsPDF("l", "mm", "a4");
       const pdfWidth = pdf.internal.pageSize.getWidth();
       const pdfHeight = (boardRef.current.offsetHeight * pdfWidth) / boardRef.current.offsetWidth;
@@ -822,7 +796,7 @@ export function RetroBoard({
 
   const participants = useMemo(() => {
     const list: { id: string; name: string; avatar?: string; cardCount: number }[] = [];
-    
+
     // Helper to get card count for an author
     const getCount = (authorId: string) => {
       return cards.filter(c => c.authorId === authorId).length;
@@ -877,7 +851,7 @@ export function RetroBoard({
       <div className="flex flex-col items-center justify-center h-full p-6 text-center select-none animate-in fade-in duration-300 relative">
         <div className="absolute top-[-10%] left-[-10%] -z-10 h-[60%] w-[60%] rounded-full bg-indigo-500/10 blur-[120px]"></div>
         <div className="absolute bottom-[-10%] right-[-10%] -z-10 h-[50%] w-[50%] rounded-full bg-purple-600/10 blur-[120px]"></div>
-        
+
         <div className="relative z-10 flex flex-col items-center max-w-md gap-6 glass p-8 rounded-[2rem] border border-zinc-200 dark:border-white/5">
           <div className="h-16 w-16 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 text-3xl flex items-center justify-center animate-bounce">
             ⏳
@@ -900,13 +874,13 @@ export function RetroBoard({
       "flex flex-col gap-3 md:gap-4 lg:gap-8 h-full p-3 md:p-4 lg:p-6 xl:p-8 overflow-hidden select-none transition-all duration-500 relative",
       isDraggingAny ? "cursor-grabbing" : "",
       timeLeft !== null && timeLeft <= 30 && timeLeft > 0 && room?.retroTimer?.status === "running"
-        ? "ring-4 ring-rose-500/20 ring-inset dark:ring-rose-500/10 shadow-[inset_0_0_100px_rgba(244,63,94,0.15)] animate-pulse" 
+        ? "ring-4 ring-rose-500/20 ring-inset dark:ring-rose-500/10 shadow-[inset_0_0_100px_rgba(244,63,94,0.15)] animate-pulse"
         : ""
     )}>
-      
+
       {/* Upper Dock: Session Title & Actions Bar */}
       <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 bg-white/60 dark:bg-white/[0.02] border border-zinc-200 dark:border-white/5 p-4 lg:p-6 rounded-[1.5rem] xl:rounded-[2rem] shadow-sm shrink-0">
-        
+
         {/* Left Side: Session Title */}
         <div className="flex flex-col gap-1">
           <h2 className="text-xl md:text-2xl lg:text-3xl font-black flex flex-wrap items-center gap-2 md:gap-4 text-zinc-900 dark:text-white tracking-tight">
@@ -925,7 +899,7 @@ export function RetroBoard({
             <div className="flex flex-col relative overflow-hidden bg-zinc-100/80 dark:bg-white/[0.02] border border-zinc-200 dark:border-white/5 p-3 rounded-2xl">
               {timeLeft !== null && room.retroTimer?.status !== "idle" && (
                 <div className="absolute top-0 left-0 right-0 h-[3px] bg-zinc-200 dark:bg-white/5">
-                  <div 
+                  <div
                     className={cn(
                       "h-full transition-all duration-1000 ease-linear",
                       timeLeft <= 15 ? "bg-rose-500 animate-pulse" : timeLeft <= 60 ? "bg-amber-500" : "bg-indigo-500"
@@ -941,7 +915,7 @@ export function RetroBoard({
                     timeLeft !== null && timeLeft > 0 && room.retroTimer?.status === "running" ? "text-indigo-500 animate-pulse" : "text-zinc-400",
                     timeLeft !== null && timeLeft <= 30 && timeLeft > 0 && "text-rose-500 animate-bounce scale-110"
                   )} />
-                  
+
                   <span className={cn(
                     "font-mono font-black text-lg md:text-xl lg:text-2xl tracking-wider tabular-nums transition-colors duration-300",
                     timeLeft === null ? "text-zinc-400" : "text-zinc-800 dark:text-white",
@@ -963,7 +937,7 @@ export function RetroBoard({
                 {isAdmin ? (
                   <div className="flex items-center gap-1.5">
                     {room.retroTimer?.status === "running" ? (
-                      <button 
+                      <button
                         onClick={pauseTimer}
                         className="p-2 hover:bg-zinc-200 dark:hover:bg-white/10 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white rounded-lg transition-colors cursor-pointer"
                         title="Pause Timer"
@@ -971,7 +945,7 @@ export function RetroBoard({
                         <Pause className="h-4 w-4" />
                       </button>
                     ) : room.retroTimer?.status === "paused" ? (
-                      <button 
+                      <button
                         onClick={resumeTimer}
                         className="p-2 bg-indigo-500 hover:bg-indigo-600 text-white rounded-lg transition-colors shadow-md shadow-indigo-500/15 cursor-pointer"
                         title="Resume Timer"
@@ -980,31 +954,31 @@ export function RetroBoard({
                       </button>
                     ) : (
                       <div className="flex items-center gap-1">
-                        <button 
+                        <button
                           onClick={() => startTimer(60)}
                           className="px-2 py-1 hover:bg-zinc-200 dark:hover:bg-white/10 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white text-[10px] font-black uppercase rounded-lg border border-zinc-200 dark:border-zinc-800/50 transition-all cursor-pointer"
                         >
                           1m
                         </button>
-                        <button 
+                        <button
                           onClick={() => startTimer(180)}
                           className="px-2 py-1 hover:bg-zinc-200 dark:hover:bg-white/10 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white text-[10px] font-black uppercase rounded-lg border border-zinc-200 dark:border-zinc-800/50 transition-all cursor-pointer"
                         >
                           3m
                         </button>
-                        <button 
+                        <button
                           onClick={() => startTimer(300)}
                           className="px-2 py-1 hover:bg-zinc-200 dark:hover:bg-white/10 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white text-[10px] font-black uppercase rounded-lg border border-zinc-200 dark:border-zinc-800/50 transition-all cursor-pointer"
                         >
                           5m
                         </button>
-                        <button 
+                        <button
                           onClick={() => startTimer(600)}
                           className="px-2 py-1 hover:bg-zinc-200 dark:hover:bg-white/10 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white text-[10px] font-black uppercase rounded-lg border border-zinc-200 dark:border-zinc-800/50 transition-all cursor-pointer"
                         >
                           10m
                         </button>
-                        <button 
+                        <button
                           onClick={() => setShowCustomTimer(!showCustomTimer)}
                           className={cn(
                             "p-2 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white rounded-lg transition-all cursor-pointer",
@@ -1018,7 +992,7 @@ export function RetroBoard({
                     )}
 
                     {room.retroTimer?.status && room.retroTimer?.status !== "idle" && (
-                      <button 
+                      <button
                         onClick={resetTimer}
                         className="p-2 hover:bg-zinc-200 dark:hover:bg-white/10 text-zinc-500 dark:text-zinc-400 hover:text-rose-500 rounded-lg transition-colors cursor-pointer"
                         title="Reset Timer"
@@ -1069,13 +1043,13 @@ export function RetroBoard({
 
           {/* Templates Selector Button */}
           {isAdmin && (
-            <button 
+            <button
               onClick={async () => {
                 if (columns.length > 0) {
                   const confirmed = await confirmCustom(
-                    "Reset Board Template", 
-                    "Are you sure you want to load a new template? This will permanently delete all existing cards and columns on this board.", 
-                    "danger", 
+                    "Reset Board Template",
+                    "Are you sure you want to load a new template? This will permanently delete all existing cards and columns on this board.",
+                    "danger",
                     "Reset & Change"
                   );
                   if (!confirmed) return;
@@ -1092,7 +1066,7 @@ export function RetroBoard({
 
           {/* New Column Button */}
           {isAdmin && (
-            <button 
+            <button
               onClick={addColumn}
               className="flex items-center gap-2 rounded-xl border border-zinc-200 dark:border-white/10 bg-zinc-100 dark:bg-white/5 py-2.5 px-4 md:py-3 md:px-6 text-xs md:text-sm font-black text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-white/10 hover:text-zinc-900 dark:hover:text-white transition-all active:scale-95 whitespace-nowrap"
             >
@@ -1103,14 +1077,14 @@ export function RetroBoard({
 
           {/* Export controls */}
           <div className="flex items-center p-1 bg-zinc-100 dark:bg-white/5 rounded-xl border border-zinc-200 dark:border-white/10">
-            <button 
+            <button
               onClick={exportToCSV}
               className="p-3 hover:bg-zinc-200 dark:hover:bg-white/10 rounded-lg text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-all active:scale-95"
               title="Export CSV"
             >
               <Download className="h-5 w-5" />
             </button>
-            <button 
+            <button
               onClick={exportToPDF}
               disabled={isExporting}
               className="p-3 hover:bg-zinc-200 dark:hover:bg-white/10 rounded-lg text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-all active:scale-95 disabled:opacity-30"
@@ -1130,7 +1104,7 @@ export function RetroBoard({
               Filter by Participant
             </span>
             {selectedParticipantId && (
-              <button 
+              <button
                 onClick={() => setSelectedParticipantId(null)}
                 className="text-[10px] font-black uppercase text-indigo-500 hover:text-indigo-600 dark:text-indigo-400 transition-colors cursor-pointer"
               >
@@ -1154,9 +1128,9 @@ export function RetroBoard({
             <div className="relative flex items-center justify-center h-6 w-6 rounded-lg bg-indigo-500/10 text-xs shrink-0">
               <span className="text-sm">👥</span>
             </div>
-            
+
             <span className="font-extrabold max-w-[120px] truncate">Everyone</span>
-            
+
             <span className={cn(
               "font-mono font-black text-[10px] px-1.5 py-0.5 rounded-md",
               !selectedParticipantId ? "bg-white/20 text-white" : "bg-zinc-100 dark:bg-white/10 text-zinc-500 dark:text-zinc-400 group-hover:bg-zinc-200"
@@ -1168,7 +1142,7 @@ export function RetroBoard({
           {/* Participant Options */}
           {participants.map((p) => {
             const isSelected = selectedParticipantId === p.id;
-            
+
             return (
               <button
                 key={p.id}
@@ -1197,8 +1171,8 @@ export function RetroBoard({
                 {p.cardCount > 0 && (
                   <span className={cn(
                     "font-mono font-black text-[10px] px-1.5 py-0.5 rounded-md",
-                    isSelected 
-                      ? "bg-white/20 text-white" 
+                    isSelected
+                      ? "bg-white/20 text-white"
                       : "bg-zinc-100 dark:bg-white/10 text-zinc-500 dark:text-zinc-400 group-hover:bg-zinc-200"
                   )}>
                     {p.cardCount}
@@ -1211,14 +1185,14 @@ export function RetroBoard({
       </div>
 
       {/* Retro Columns Drag & Drop Board */}
-      <DndContext 
-        sensors={sensors} 
+      <DndContext
+        sensors={sensors}
         collisionDetection={closestCenter}
-        onDragStart={handleDragStart} 
-        onDragEnd={handleDragEnd} 
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
         onDragCancel={handleDragCancel}
       >
-        <div 
+        <div
           ref={boardRef}
           className="flex-1 flex flex-row overflow-x-auto overflow-y-hidden gap-4 lg:gap-6 xl:gap-8 p-2 sm:p-4 md:p-6 pb-24 custom-scrollbar animate-in fade-in duration-300 snap-x snap-mandatory lg:snap-none items-stretch"
         >
@@ -1229,8 +1203,8 @@ export function RetroBoard({
 
               return (
                 <SortableColumnWrapper
-                  key={col.id} 
-                  col={col} 
+                  key={col.id}
+                  col={col}
                   isAdmin={isAdmin}
                   renameColumn={renameColumn}
                   deleteColumn={deleteColumn}
@@ -1251,123 +1225,25 @@ export function RetroBoard({
                       isActionItem={isActionItemColumn}
                       onDeleteCard={deleteCard}
                       onToggleUpvote={toggleUpvote}
+                      onEditCard={(c) => {
+                        setActiveInsightCard(c);
+                        setActiveInsightColId(c.columnId);
+                        setIsInsightModalOpen(true);
+                      }}
                     />
                   ))}
-                  {/* Adding Retro Card UI */}
-                  {activeColumnId === col.id ? (
-                    <div className="flex flex-col gap-4 rounded-2xl lg:rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-5 lg:p-6 shadow-md dark:shadow-2xl relative overflow-hidden transition-all duration-300 animate-in fade-in zoom-in-95 duration-200">
-                      <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 z-20"></div>
-                      
-                      <div className="relative rounded-2xl border border-zinc-200/80 dark:border-zinc-800 bg-zinc-50/30 dark:bg-zinc-950/40 p-4 focus-within:border-indigo-500/50 focus-within:ring-2 focus-within:ring-indigo-500/10 focus-within:bg-white dark:focus-within:bg-zinc-950/60 transition-all duration-300">
-                        <textarea 
-                          autoFocus
-                          placeholder="Type your thought..."
-                          className="w-full bg-transparent border-none text-zinc-900 dark:text-white text-sm md:text-base focus:outline-none resize-none min-h-[140px] custom-scrollbar placeholder-zinc-400 dark:placeholder-zinc-600 font-medium"
-                          value={newCardText}
-                          onChange={(e) => setNewCardText(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter" && !e.shiftKey) {
-                              e.preventDefault();
-                              addCard(col.id);
-                            }
-                          }}
-                        />
-                      </div>
-                      
-                      {newCardImage && (
-                        <div className="relative w-full min-h-[300px] rounded-xl overflow-hidden my-2 bg-black/40 border border-indigo-500/20">
-                          <Image 
-                            src={newCardImage} 
-                            alt="Preview" 
-                            fill
-                            unoptimized
-                            className="object-contain opacity-90 transition-opacity" 
-                          />
-                          <button 
-                            onClick={() => setNewCardImage("")}
-                            className="absolute top-1.5 right-1.5 bg-black/60 p-1.5 rounded-full text-white hover:bg-black transition-all cursor-pointer"
-                          >
-                            <X className="h-3 w-3" />
-                          </button>
-                        </div>
-                      )}
-                      
-                      {activeGifSearch === 'new' && (
-                        <div className="mt-2">
-                          <GifPicker 
-                            onSelect={(url: string) => {
-                              setNewCardImage(url);
-                              setActiveGifSearch(null);
-                            }} 
-                            onClose={() => setActiveGifSearch(null)} 
-                          />
-                        </div>
-                      )}
-
-                      <div className="flex items-center justify-between gap-3 pt-4 border-t border-zinc-200 dark:border-zinc-800 w-full overflow-x-auto scrollbar-none py-1">
-                        <div className="flex items-center gap-2 shrink-0">
-                          <label 
-                            title="Upload Image"
-                            className="h-10 px-4 rounded-xl transition-all flex items-center justify-center gap-2 bg-zinc-100 dark:bg-white/5 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-200 dark:hover:bg-white/10 hover:border-zinc-300 dark:hover:border-zinc-700 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 cursor-pointer active:scale-95 border border-zinc-200/50 dark:border-white/5 text-[11px] font-black uppercase tracking-wider whitespace-nowrap shrink-0"
-                          >
-                            <UploadCloud className="h-4 w-4" />
-                            <span className="text-[11px] font-black uppercase tracking-wider">Image</span>
-                            <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
-                          </label>
-                          <button 
-                            title="Add GIF"
-                            onClick={() => {
-                              setActiveGifSearch(activeGifSearch === 'new' ? null : 'new');
-                            }}
-                            className={cn(
-                              "h-10 px-4 rounded-xl transition-all flex items-center justify-center border border-zinc-200/50 dark:border-white/5 active:scale-95 text-[11px] font-black uppercase tracking-wider cursor-pointer whitespace-nowrap shrink-0",
-                              activeGifSearch === 'new' 
-                                ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/20 border-transparent" 
-                                : "bg-zinc-100 dark:bg-white/5 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-200 dark:hover:bg-white/10 hover:border-zinc-300 dark:hover:border-zinc-700 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-500/10"
-                            )}
-                          >
-                            <span className="text-[11px] font-black uppercase tracking-wider">GIF</span>
-                          </button>
-                        </div>
-                        <div className="flex items-center gap-2 shrink-0">
-                          <button 
-                            onClick={() => {
-                              setActiveColumnId(null);
-                              setNewCardText("");
-                              setNewCardImage("");
-                              setActiveGifSearch(null);
-                            }}
-                            title="Cancel"
-                            aria-label="Cancel"
-                            className="w-10 h-10 flex items-center justify-center text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition-all cursor-pointer hover:bg-zinc-100 dark:hover:bg-white/5 rounded-xl active:scale-95 whitespace-nowrap shrink-0"
-                          >
-                            <X className="h-5 w-5" />
-                            <span className="sr-only">Cancel</span>
-                          </button>
-                          <button 
-                            onClick={() => addCard(col.id)} 
-                            title="Post Insight"
-                            aria-label="Post Insight"
-                            className="bg-indigo-600 hover:bg-indigo-500 text-white w-10 h-10 rounded-xl active:scale-95 shadow-lg shadow-indigo-500/20 transition-all cursor-pointer flex items-center justify-center whitespace-nowrap shrink-0"
-                          >
-                            <Plus className="h-5 w-5" />
-                            <span className="sr-only">Post Insight</span>
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                    <button 
-                      onClick={() => {
-                        setActiveColumnId(col.id);
-                        setNewCardText("");
-                      }}
-                      className="flex h-12 lg:h-16 items-center justify-center gap-2 lg:gap-3 rounded-xl lg:rounded-2xl border-2 border-dashed border-zinc-200 dark:border-white/10 bg-white/60 dark:bg-white/[0.02] text-zinc-500 dark:text-zinc-400 hover:border-indigo-500/50 hover:bg-indigo-50/50 dark:hover:bg-indigo-500/5 hover:text-indigo-600 dark:hover:text-indigo-400 transition-all group active:scale-95 cursor-pointer"
-                    >
-                      <Plus className="h-4 w-4 lg:h-5 lg:w-5 transition-transform group-hover:scale-125" />
-                      <span className="font-bold text-xs lg:text-sm uppercase tracking-widest">Add a card</span>
-                    </button>
-                  )}
+                  {/* Big Add Card Button triggering modal */}
+                  <button
+                    onClick={() => {
+                      setActiveInsightColId(col.id);
+                      setActiveInsightCard(null);
+                      setIsInsightModalOpen(true);
+                    }}
+                    className="flex h-12 lg:h-16 items-center justify-center gap-2 lg:gap-3 rounded-xl lg:rounded-2xl border-2 border-dashed border-zinc-200 dark:border-white/10 bg-white/60 dark:bg-white/[0.02] text-zinc-500 dark:text-zinc-400 hover:border-indigo-500/50 hover:bg-indigo-50/50 dark:hover:bg-indigo-500/5 hover:text-indigo-600 dark:hover:text-indigo-400 transition-all group active:scale-95 cursor-pointer"
+                  >
+                    <Plus className="h-4 w-4 lg:h-5 lg:w-5 transition-transform group-hover:scale-125" />
+                    <span className="font-bold text-xs lg:text-sm uppercase tracking-widest">Add a card</span>
+                  </button>
                 </SortableColumnWrapper>
               );
             })}
@@ -1392,8 +1268,8 @@ export function RetroBoard({
                     users={users}
                     mergedCards={filteredCards.filter(c => c.parentCardId === activeCardId)}
                     isActionItem={isActionItemColumn}
-                    onDeleteCard={async () => {}}
-                    onToggleUpvote={async () => {}}
+                    onDeleteCard={async () => { }}
+                    onToggleUpvote={async () => { }}
                     isOverlay={true}
                   />
                 );
@@ -1410,8 +1286,8 @@ export function RetroBoard({
                   <ColumnDroppable
                     col={col}
                     isAdmin={isAdmin}
-                    renameColumn={() => {}}
-                    deleteColumn={() => {}}
+                    renameColumn={() => { }}
+                    deleteColumn={() => { }}
                     cardsCount={colCards.length}
                     isOverlay={true}
                   >
@@ -1427,8 +1303,8 @@ export function RetroBoard({
                         users={users}
                         mergedCards={filteredCards.filter(c => c.parentCardId === card.id)}
                         isActionItem={isActionItemColumn}
-                        onDeleteCard={async () => {}}
-                        onToggleUpvote={async () => {}}
+                        onDeleteCard={async () => { }}
+                        onToggleUpvote={async () => { }}
                         isOverlay={true}
                       />
                     ))}
@@ -1440,13 +1316,26 @@ export function RetroBoard({
         </DragOverlay>
       </DndContext>
       <CustomDialog {...dialogProps} />
-      <RetroTemplateModal 
-        isOpen={showTemplateModal} 
-        onSelectPreset={applyTemplate} 
+      <RetroTemplateModal
+        isOpen={showTemplateModal}
+        onSelectPreset={applyTemplate}
         onCancel={() => {
           setManualOpenModal(false);
           setHasDismissedModal(true);
-        }} 
+        }}
+      />
+      <RetroInsightModal
+        key={activeInsightColId + "-" + (activeInsightCard?.id || "new")}
+        isOpen={isInsightModalOpen}
+        columnTitle={columns.find(c => c.id === activeInsightColId)?.title || ""}
+        columnColor={columns.find(c => c.id === activeInsightColId)?.color || "default"}
+        card={activeInsightCard}
+        onSave={handleSaveInsight}
+        onCancel={() => {
+          setIsInsightModalOpen(false);
+          setActiveInsightColId(null);
+          setActiveInsightCard(null);
+        }}
       />
     </div>
   );
