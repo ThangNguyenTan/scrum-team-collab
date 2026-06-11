@@ -8,7 +8,8 @@ import {
   collection, 
   serverTimestamp,
   arrayUnion,
-  arrayRemove
+  arrayRemove,
+  writeBatch
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import {
@@ -24,15 +25,18 @@ import {
   RotateCcw,
   Sliders,
   Check,
-  GripHorizontal
+  GripHorizontal,
+  LayoutGrid
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import jsPDF from "jspdf";
 import { toPng } from "html-to-image";
 import { RoomData, RoomUser, RetroColumn, RetroCard as RetroCardType } from "@/types";
 import { RetroCard } from "./RetroCard";
-import { GifPicker, CustomDialog, useCustomDialog } from "@/ui";
+import { GifPicker, CustomDialog, useCustomDialog, RetroTemplateModal } from "@/ui";
 import { playPing, playTada } from "@/lib/audioSynth";
+import { RETRO_TEMPLATES } from "@/constants";
+
 
 // DND kit imports
 import { 
@@ -345,6 +349,13 @@ export function RetroBoard({
   avatar 
 }: RetroBoardProps) {
   const { alertCustom, confirmCustom, promptCustom, dialogProps } = useCustomDialog();
+  // Template presets states
+  const [manualOpenModal, setManualOpenModal] = useState(false);
+  const [hasDismissedModal, setHasDismissedModal] = useState(false);
+
+  // Derived state to avoid triggering setState in useEffect
+  const showTemplateModal = manualOpenModal || (isAdmin && columns.length === 0 && !hasDismissedModal);
+
   // New Card State
   const [newCardText, setNewCardText] = useState("");
   const [newCardImage, setNewCardImage] = useState("");
@@ -354,6 +365,7 @@ export function RetroBoard({
   const boardRef = useRef<HTMLDivElement>(null);
   const [activeCardId, setActiveCardId] = useState<string | null>(null);
   const [activeColumnIdDrag, setActiveColumnIdDrag] = useState<string | null>(null);
+
 
   // Participant Filter State
   const [selectedParticipantId, setSelectedParticipantId] = useState<string | null>(null);
@@ -500,6 +512,53 @@ export function RetroBoard({
     const confirmed = await confirmCustom("Delete Insight Card", "Are you sure you want to delete this card? This action cannot be undone.", "danger", "Delete");
     if (!confirmed) return;
     await deleteDoc(doc(db, "rooms", roomId, "cards", cardId));
+  };
+
+  const applyTemplate = async (presetId: string) => {
+    const preset = RETRO_TEMPLATES.find(t => t.id === presetId);
+    if (!preset) return;
+
+    setManualOpenModal(false);
+    setHasDismissedModal(true);
+
+    try {
+      const batch = writeBatch(db);
+
+      // 1. Delete all existing cards (if any)
+      for (const card of cards) {
+        const cardRef = doc(db, "rooms", roomId, "cards", card.id);
+        batch.delete(cardRef);
+      }
+
+      // 2. Delete all existing columns (if any)
+      for (const col of columns) {
+        const colRef = doc(db, "rooms", roomId, "columns", col.id);
+        batch.delete(colRef);
+      }
+
+      // 3. Create new columns from preset
+      preset.columns.forEach((colPreset, index) => {
+        const colCollectionRef = collection(db, "rooms", roomId, "columns");
+        const newColRef = doc(colCollectionRef);
+        batch.set(newColRef, {
+          title: colPreset.title,
+          color: colPreset.color,
+          order: index
+        });
+      });
+
+      // 4. Reset revealed status (if transitioning from planning)
+      const roomRef = doc(db, "rooms", roomId);
+      batch.update(roomRef, {
+        revealed: false
+      });
+
+      await batch.commit();
+      playTada();
+    } catch (error) {
+      console.error("Failed to apply retrospective template:", error);
+      await alertCustom("Error", "Failed to apply retrospective template. Please try again.");
+    }
   };
 
   const addColumn = async () => {
@@ -761,8 +820,6 @@ export function RetroBoard({
     setIsExporting(false);
   };
 
-  if (!room) return null;
-
   const participants = useMemo(() => {
     const list: { id: string; name: string; avatar?: string; cardCount: number }[] = [];
     
@@ -812,6 +869,31 @@ export function RetroBoard({
 
   const totalDuration = room?.retroTimer?.duration ?? 300;
   const progressPercent = timeLeft !== null ? (timeLeft / totalDuration) * 100 : 0;
+
+  if (!room) return null;
+
+  if (columns.length === 0 && !isAdmin) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full p-6 text-center select-none animate-in fade-in duration-300 relative">
+        <div className="absolute top-[-10%] left-[-10%] -z-10 h-[60%] w-[60%] rounded-full bg-indigo-500/10 blur-[120px]"></div>
+        <div className="absolute bottom-[-10%] right-[-10%] -z-10 h-[50%] w-[50%] rounded-full bg-purple-600/10 blur-[120px]"></div>
+        
+        <div className="relative z-10 flex flex-col items-center max-w-md gap-6 glass p-8 rounded-[2rem] border border-zinc-200 dark:border-white/5">
+          <div className="h-16 w-16 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 text-3xl flex items-center justify-center animate-bounce">
+            ⏳
+          </div>
+          <div className="space-y-2">
+            <h3 className="text-xl font-black text-zinc-900 dark:text-white tracking-tight">
+              Retrospective Board Configuration
+            </h3>
+            <p className="text-sm text-zinc-500 dark:text-zinc-400 font-medium leading-relaxed">
+              Waiting for the host to select a board template and launch the session. Hang tight!
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={cn(
@@ -870,7 +952,7 @@ export function RetroBoard({
 
                   {timeLeft !== null && timeLeft === 0 && (
                     <span className="text-[10px] font-black uppercase text-rose-500 animate-pulse px-2 py-0.5 bg-rose-500/10 rounded-md border border-rose-500/20">
-                      Time's Up!
+                      Time&apos;s Up!
                     </span>
                   )}
                 </div>
@@ -984,6 +1066,29 @@ export function RetroBoard({
               </div>
             )}
           </div>
+
+          {/* Templates Selector Button */}
+          {isAdmin && (
+            <button 
+              onClick={async () => {
+                if (columns.length > 0) {
+                  const confirmed = await confirmCustom(
+                    "Reset Board Template", 
+                    "Are you sure you want to load a new template? This will permanently delete all existing cards and columns on this board.", 
+                    "danger", 
+                    "Reset & Change"
+                  );
+                  if (!confirmed) return;
+                }
+                setManualOpenModal(true);
+                setHasDismissedModal(false);
+              }}
+              className="flex items-center gap-2 rounded-xl border border-zinc-200 dark:border-white/10 bg-zinc-100 dark:bg-white/5 py-2.5 px-4 md:py-3 md:px-6 text-xs md:text-sm font-black text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 transition-all active:scale-95 whitespace-nowrap"
+            >
+              <LayoutGrid className="h-4 w-4" />
+              Templates
+            </button>
+          )}
 
           {/* New Column Button */}
           {isAdmin && (
@@ -1335,6 +1440,14 @@ export function RetroBoard({
         </DragOverlay>
       </DndContext>
       <CustomDialog {...dialogProps} />
+      <RetroTemplateModal 
+        isOpen={showTemplateModal} 
+        onSelectPreset={applyTemplate} 
+        onCancel={() => {
+          setManualOpenModal(false);
+          setHasDismissedModal(true);
+        }} 
+      />
     </div>
   );
 }
