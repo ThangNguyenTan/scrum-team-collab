@@ -29,8 +29,12 @@ test.describe('Room E2E', () => {
     // Switch to Retro
     await retroTab.click();
     
-    // Once retro tab is clicked, Firebase hook `handleTabSwitch` generates default columns if they are absent
-    await expect(page.getByText('What went well', { exact: true })).toBeVisible({ timeout: 10000 });
+    // Select template preset
+    await expect(page.getByText('Select Retrospective Template')).toBeVisible();
+    await page.getByRole('button', { name: 'Good, Bad, Ideas, Actions' }).click();
+    
+    // Once retro tab is clicked and template is selected, retro columns render
+    await expect(page.getByText('What Went Well', { exact: true })).toBeVisible({ timeout: 10000 });
     await expect(page.getByText('Action Items', { exact: true })).toBeVisible();
   });
 
@@ -86,8 +90,12 @@ test.describe('Room E2E', () => {
     await expect(retroTab).toBeVisible();
     await retroTab.click();
 
+    // Select template preset
+    await expect(page.getByText('Select Retrospective Template')).toBeVisible();
+    await page.getByRole('button', { name: 'Good, Bad, Ideas, Actions' }).click();
+
     // Verify first column appears
-    await expect(page.getByText('What went well', { exact: true })).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText('What Went Well', { exact: true })).toBeVisible({ timeout: 10000 });
 
     // Focus isolation to the first column 
 
@@ -103,7 +111,7 @@ test.describe('Room E2E', () => {
     await textArea.fill('Automated E2E testing is fully operational! 🚀');
 
     // Submit it
-    const postButton = page.getByRole('button', { name: /Post Insight/i });
+    const postButton = page.getByRole('button', { name: 'Post Insight', exact: true });
     await postButton.click();
 
     // Verify the card was added and is visible (not inside the textarea)

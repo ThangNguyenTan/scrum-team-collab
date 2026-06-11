@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Export Meeting Summary E2E', () => {
-  test('should generate markdown containing tickets and retro cards', async ({ page, context }) => {
+  test('should generate markdown containing tickets and retro cards', async ({ page }) => {
     // 1. Create a room
     await page.goto('/');
     const identityInput = page.getByPlaceholder('Identify yourself...');
@@ -35,6 +35,10 @@ test.describe('Export Meeting Summary E2E', () => {
     // 3. Switch to Retro tab
     const retroTab = page.getByRole('button', { name: 'Retro' });
     await retroTab.click();
+
+    // Select template preset
+    await expect(page.getByText('Select Retrospective Template')).toBeVisible();
+    await page.getByRole('button', { name: 'Good, Bad, Ideas, Actions' }).click();
     
     // Add a retro card to the first column
     const addCardButton = page.getByRole('button', { name: 'Add a card', exact: true }).first();
@@ -45,7 +49,7 @@ test.describe('Export Meeting Summary E2E', () => {
     await expect(textArea).toBeVisible();
     await textArea.fill('Great teamwork on PROJ-123');
 
-    const postButton = page.getByRole('button', { name: /Post Insight/i });
+    const postButton = page.getByRole('button', { name: 'Post Insight', exact: true });
     await postButton.click();
 
     await expect(page.getByText('Great teamwork on PROJ-123')).toBeVisible();
@@ -67,6 +71,6 @@ test.describe('Export Meeting Summary E2E', () => {
     // Assert markdown contains expected strings
     expect(markdownValue).toContain('PROJ-123');
     expect(markdownValue).toContain('Great teamwork on PROJ-123');
-    expect(markdownValue).toContain('What went well');
+    expect(markdownValue).toContain('What Went Well');
   });
 });

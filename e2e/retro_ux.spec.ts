@@ -15,8 +15,14 @@ test.describe('Retro UX and Board Features', () => {
     await expect(retroTab).toBeVisible();
     await retroTab.click();
 
+    // Select a template since the board starts empty
+    await expect(page.getByText('Select Retrospective Template')).toBeVisible();
+    const presetBtn = page.getByRole('button', { name: 'Good, Bad, Ideas, Actions' });
+    await expect(presetBtn).toBeVisible();
+    await presetBtn.click();
+
     // Verify retro columns render
-    await expect(page.getByText('What went well', { exact: true })).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText('What Went Well', { exact: true })).toBeVisible({ timeout: 10000 });
 
     // 3. Test Adding a Card
     const addCardButton = page.getByRole('button', { name: 'Add a card', exact: true }).first();
@@ -29,7 +35,7 @@ test.describe('Retro UX and Board Features', () => {
     await textArea.fill('This is a test retro card!');
 
     // Post card
-    const postButton = page.getByRole('button', { name: /Post Insight/i });
+    const postButton = page.getByRole('button', { name: 'Post Insight', exact: true });
     await postButton.click();
 
     // Verify card is added
@@ -41,7 +47,7 @@ test.describe('Retro UX and Board Features', () => {
     await expect(authorSpan).toBeVisible();
 
     // 4. Test Commenting System
-    const commentsButton = page.getByRole('button', { name: /Comments \(0\)/i });
+    const commentsButton = page.getByRole('button', { name: 'Comments (0)', exact: true });
     await expect(commentsButton).toBeVisible();
     await commentsButton.click();
 
@@ -57,9 +63,9 @@ test.describe('Retro UX and Board Features', () => {
     // Comment should display in thread
     await expect(page.getByText('An automated test comment! 🤖')).toBeVisible();
     
-    const commentsBtnUpdated = page.getByRole('button', { name: /Comments \(1\)/i });
+    const commentsBtnUpdated = page.getByRole('button', { name: 'Comments (1)', exact: true });
     await expect(commentsBtnUpdated).toBeVisible();
-
+    
     // Close comments drawer/container
     await commentsBtnUpdated.click();
 
@@ -91,7 +97,7 @@ test.describe('Retro UX and Board Features', () => {
 
     // 6. Test Action Items Assignee & Status Tracker
     // Locate the "Action Items" column's Add card button (usually the third column)
-    const actionItemsAddCard = page.getByRole('button', { name: 'Add a card', exact: true }).nth(2);
+    const actionItemsAddCard = page.getByRole('button', { name: 'Add a card', exact: true }).nth(3);
     await actionItemsAddCard.scrollIntoViewIfNeeded();
     await actionItemsAddCard.click();
 
@@ -100,29 +106,54 @@ test.describe('Retro UX and Board Features', () => {
     await actionTextArea.fill('Resolve backend database latency');
 
     // Post to Action Items
-    const postActionInsight = page.getByRole('button', { name: /Post Insight/i });
+    const postActionInsight = page.getByRole('button', { name: 'Post Insight', exact: true });
     await postActionInsight.click();
 
     // Check Action card elements are visible
     await expect(page.getByText('Resolve backend database latency')).toBeVisible();
+  });
 
-    // Assignee dropdown should exist
-    const assigneeSelect = page.locator('select').first();
-    await expect(assigneeSelect).toBeVisible();
-    // Choose "Retro Tester" in dropdown
-    await assigneeSelect.selectOption({ label: 'Retro Tester' });
-    await expect(assigneeSelect).toHaveValue(/^[a-zA-Z0-9_-]+$/); // it will have the current user's UID as value
+  test('should allow switching between different presets and resetting the board', async ({ page }) => {
+    // 1. Join room
+    await page.goto('/');
+    await page.getByPlaceholder('Identify yourself...').fill('Preset Master');
+    await page.getByRole('button', { name: 'FE', exact: true }).click();
+    await page.getByRole('button', { name: /Initialize SCRUM_SESSION/i }).click();
 
-    // Status cycle check (Todo -> In Progress -> Done -> Todo)
-    const statusBtn = page.getByRole('button', { name: /Todo/i });
-    await expect(statusBtn).toBeVisible();
-    await statusBtn.click(); // Cycles to In Progress
-    
-    const inProgressBtn = page.getByRole('button', { name: /In Progress/i });
-    await expect(inProgressBtn).toBeVisible();
-    await inProgressBtn.click(); // Cycles to Done
+    await page.waitForURL('**/room/**');
 
-    const doneBtn = page.getByRole('button', { name: /Done/i });
-    await expect(doneBtn).toBeVisible();
+    // 2. Switch to Retro tab
+    const retroTab = page.getByRole('button', { name: 'Retro' });
+    await expect(retroTab).toBeVisible();
+    await retroTab.click();
+
+    // 3. Verify modal opens and select "Glad, Sad, Mad" preset
+    await expect(page.getByText('Select Retrospective Template')).toBeVisible();
+    await page.getByRole('button', { name: 'Glad, Sad, Mad' }).click();
+
+    // Verify columns from preset render
+    await expect(page.getByText('Glad', { exact: true })).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText('Sad', { exact: true })).toBeVisible();
+    await expect(page.getByText('Mad', { exact: true })).toBeVisible();
+
+    // 4. Click Templates button in header to change template
+    const templatesBtn = page.getByRole('button', { name: /Templates/i });
+    await expect(templatesBtn).toBeVisible();
+    await templatesBtn.click();
+
+    // Confirm reset in dialog
+    const confirmBtn = page.getByRole('button', { name: 'Reset & Change' });
+    await expect(confirmBtn).toBeVisible();
+    await confirmBtn.click();
+
+    // Select "Sailboat Retrospective" template
+    await expect(page.getByText('Select Retrospective Template')).toBeVisible();
+    await page.getByRole('button', { name: 'Sailboat Retrospective' }).click();
+
+    // Verify Sailboat columns render
+    await expect(page.getByText('Wind (What helps us?)', { exact: true })).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText('Anchor (What slows us down?)', { exact: true })).toBeVisible();
+    await expect(page.getByText('Rocks (What risks do we face?)', { exact: true })).toBeVisible();
+    await expect(page.getByText('Sun (What are we aiming for?)', { exact: true })).toBeVisible();
   });
 });

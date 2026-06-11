@@ -117,3 +117,78 @@ export const getGroupStyles = (group?: string) => {
   return GROUP_COLORS[normalized] || "border-indigo-500/40 bg-indigo-500/5 text-indigo-600 dark:text-indigo-400";
 };
 
+export interface RetroTemplateColumn {
+  title: string;
+  color: 'emerald' | 'rose' | 'amber' | 'sky' | 'purple' | 'default';
+}
+
+export interface RetroTemplatePreset {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+  columns: RetroTemplateColumn[];
+}
+
+export const RETRO_TEMPLATES: RetroTemplatePreset[] = [
+  {
+    id: "glad_sad_mad",
+    name: "Glad, Sad, Mad",
+    description: "Focus on emotional health and team dynamics.",
+    icon: "😊",
+    columns: [
+      { title: "Glad", color: "emerald" },
+      { title: "Sad", color: "rose" },
+      { title: "Mad", color: "amber" }
+    ]
+  },
+  {
+    id: "start_stop_continue",
+    name: "Start, Stop, Continue",
+    description: "Identify actionable process improvements.",
+    icon: "🛑",
+    columns: [
+      { title: "Start", color: "emerald" },
+      { title: "Stop", color: "rose" },
+      { title: "Continue", color: "sky" }
+    ]
+  },
+  {
+    id: "good_bad_ideas_actions",
+    name: "Good, Bad, Ideas, Actions",
+    description: "A comprehensive format for retrospecting projects.",
+    icon: "💡",
+    columns: [
+      { title: "What Went Well", color: "emerald" },
+      { title: "What To Improve", color: "rose" },
+      { title: "New Ideas", color: "sky" },
+      { title: "Action Items", color: "purple" }
+    ]
+  },
+  {
+    id: "four_ls",
+    name: "The 4 Ls",
+    description: "Structure reflection around learnings and gaps.",
+    icon: "📚",
+    columns: [
+      { title: "Liked", color: "emerald" },
+      { title: "Learned", color: "sky" },
+      { title: "Lacked", color: "rose" },
+      { title: "Longed For", color: "purple" }
+    ]
+  },
+  {
+    id: "sailboat",
+    name: "Sailboat Retrospective",
+    description: "A creative visual metaphor to analyze current trajectory.",
+    icon: "⛵",
+    columns: [
+      { title: "Wind (What helps us?)", color: "sky" },
+      { title: "Anchor (What slows us down?)", color: "rose" },
+      { title: "Rocks (What risks do we face?)", color: "amber" },
+      { title: "Sun (What are we aiming for?)", color: "emerald" }
+    ]
+  }
+];
+
+
